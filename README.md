@@ -1,0 +1,79 @@
+### ASD Spectral File Reader
+
+
+Reading *.asd binary file in Python
+
+The *.asd file supports for:
+
+ASD AgriSpec, ASD FieldSpec range, ASD FieldSpec 4 Hi-Res NG, ASD FieldSpec 4 Hi-Res, ASD FieldSpec 4 Standard-Res, ASD FieldSpec 4 Wide-Res, ASD HandHeld 2 Pro, ASD HandHeld 2, ASD LabSpec range, ASD LabSpec 4 Bench, ASD LabSpec 4 Hi-Res, ASD LabSpec 4 Standard-Res, ASD TerraSpec range, ASD TerraSpec 4 Hi-Res, ASD TerraSpec 4 Standard-Res。
+
+
+
+#### To cite this repo (Chicago style):
+
+Cao, Kai. (2025). "ASD_File_Reader". https://github.com/KaiTastic/ASD_File_Reader
+
+
+
+####   Description for Version 1.0.0 (ASD_File_Reader.py)
+
+| ASD File Structure             | class ASDFile()                                      |
+| ------------------------------ | ---------------------------------------------------- |
+| Spectrum File Header           | self.asdFileVersion; self.metadata                   |
+| Spectrum Data                  | self.spectrumData                                    |
+| Reference File Header          | self.referenceFileHeader                             |
+| Reference Data                 | self.referenceData                                   |
+| Classifier Data                | self.classifierData                                  |
+| Dependent Variables            | self.dependants                                      |
+| Calibration Header             | self.calibrationHeader                               |
+| Absolute/Base Calibration Data | self.calibrationSeriesABS; self.calibrationSeriesBSE |
+| Lamp Calibration Data          | self.calibrationSeriesLMP                            |
+| Fiber Optic Data               | self.calibrationSeriesFO                             |
+| Audit Log                      | self.auditLog                                        |
+| Signature                      | self.signature                                       |
+
+##### Benchmark test
+
+The benchmark test of **ASD_File_Reader 1.0.0** has been fulfilled with ViewSpecPro 6.2.0, to verify the result of calculation properties:
+
+###### Tested
+
+- @dn
+- @reflectance, reflectanceNoDeriv, reflectance1stDeriv, reflectance2ndDeriv
+- @absoluteReflectance
+- @log1R, log1RNoDeriv, log1R1stDeriv, log1R2ndDeriv
+
+###### **Not yet finished:**
+
+- @radiance
+- @irradiance
+- @parabolic_correction
+
+#### Comming soon:
+
+##### Spectral Discontinuities Correction
+
+Spectral discontinuities, or "step/jump", are the radiation steps in the spectral curve at the junction of the instrument, which will affect the quality of the spectral data.
+
+This correction module provides the temperature-based **Hueni method** ([Hueni and Bialek, 2017]() and the parabola-based **ASD Parabolic method** ([ASD Inc., 2015]()) to correct the jumps.
+
+##### Code Description
+
+###### Solve for external temperature based on empirical formula
+
+By querying the `coeffs` table (`src\asd_temp_corr_coeffs.mat`), we can get the `a, b, c` values, and solve T according to the `eq. 8` in ([Hueni and Bialek, 2017]()).
+
+
+
+#### Reference
+
+[ASD Inc., (2017). ASD File Format: Version 8 (Revision): 1-10. ](https://www.malvernpanalytical.com/en/learn/knowledge-center/user-manuals/asd-file-format-v8)
+
+ASD Inc., Indico Version 7 File Format: 1-9.
+
+ASD Inc., (2008). ViewSpec Pro User Manual: 1-24.
+
+ASD Inc., (2015). FieldSpec 4 User Manual, pp. 1-10.
+
+Hueni, A. and A. Bialek, (2017). "Cause, Effect, and Correction of Field Spectroradiometer Interchannel Radiometric Steps." IEEE Journal of Selected Topics in Applied Earth Observations and Remote Sensing 10(4): 1542-1551.
+
