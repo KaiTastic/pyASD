@@ -781,14 +781,11 @@ class ASDFile(object):
 
         iStartingWavelength = int(self.metadata.channel1_wavelength)
         iEndingWavelength = int(self.metadata.channels - 1) + int(self.metadata.channel1_wavelength)
-
         InstrumentType = self.get_instrument_type(iStartingWavelength, iEndingWavelength)
-
         iSplice1 = int(self.metadata.splice1_wavelength)
         iSplice2 = int(self.metadata.splice2_wavelength)
         iVertex1 = 675
         iVertex2 = 1975
-
         if (((InstrumentType & InstrumentModel_e.itVnir.value) == InstrumentModel_e.itVnir.value) and
             ((InstrumentType & InstrumentModel_e.itSwir1.value) == InstrumentModel_e.itSwir1.value) and
             ((InstrumentType & InstrumentModel_e.itSwir2.value) == InstrumentModel_e.itSwir2.value)) or \
@@ -796,17 +793,13 @@ class ASDFile(object):
             ((InstrumentType & InstrumentModel_e.itSwir1.value) == InstrumentModel_e.itSwir1.value)) or \
            (((InstrumentType & InstrumentModel_e.itSwir1.value) == InstrumentModel_e.itSwir1.value) and
             ((InstrumentType & InstrumentModel_e.itSwir2.value) == InstrumentModel_e.itSwir2.value)):
-
             iAvgLen = iSplice1 - iVertex1
             iIndex = iSplice1 - iStartingWavelength
-            # 计算 VNIR 或 SWIR1 的 pfactor
+            # Calculate the pfactor of VNIR and SWIR1 
             dPC = radiance[iIndex]
-
             if dPC == 0:
                 dPC = 1
-
             dPCFactor1 = (self.average(radiance, iIndex + 1, DEFAULT_GAP) - radiance[iIndex]) / (dPC * iAvgLen * iAvgLen)
-
             nPoint = abs(iVertex1 - iStartingWavelength)
             iWavelength = iVertex1
             dE = len(radiance)
@@ -816,29 +809,22 @@ class ASDFile(object):
                     radiance[nPoint] *= (dPCFactor1 * (iWavelength - iVertex1) ** 2 + 1)
                 nPoint += 1
                 iWavelength += 1
-
             if InstrumentType == InstrumentModel_e.itVnirSwir1Swir2.value:
                 # 计算 SWIR2 的 PC
                 iAvgLen = iSplice2 - iVertex2
-
                 iIndex = iSplice2 - iStartingWavelength
-                # 计算 SWIR2 的 pfactor
+                # Calculate the pfactor of SWIR2
                 dPC = self.average(radiance, iIndex + 1, DEFAULT_GAP)
-
                 if dPC == 0:
                     dPC = 1
-
                 dPCFactor2 = (self.average(radiance, iIndex - 2, DEFAULT_GAP) -
                               self.average(radiance, iIndex + 1, DEFAULT_GAP)) / (dPC * iAvgLen * iAvgLen)
-
                 nPoint = (iSplice2 - iStartingWavelength) + 1
                 iWavelength = iSplice2 + 1
-
                 while iWavelength <= iVertex2:
                     radiance[nPoint] *= (dPCFactor2 * (iWavelength - iVertex2) ** 2 + 1)
                     nPoint += 1
                     iWavelength += 1
-
         return radiance
         
 

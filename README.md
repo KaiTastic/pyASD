@@ -1,6 +1,6 @@
-### ASD Spectral File Reader
+## ASD Spectral File Reader
 
-##### To cite this repository:
+#### To cite this repository:
 
 Cao, Kai. (2025). "ASD_File_Reader". https://github.com/KaiTastic/ASD_File_Reader
 
@@ -8,7 +8,7 @@ Cao, Kai. (2025). "ASD_File_Reader". https://github.com/KaiTastic/ASD_File_Reade
 
 The repo is create for reading the all versions of *.asd binary file in Python.
 
-##### About the *.asd file
+#### About the *.asd file
 
  The *.asd file supports for:
 
@@ -32,18 +32,18 @@ The repo is create for reading the all versions of *.asd binary file in Python.
 | Audit Log                      | self.auditLog                                        |
 | Signature                      | self.signature                                       |
 
-#### Benchmark test
+### Benchmark test
 
 The benchmark test of **ASD_File_Reader 1.0.0** has been fulfilled with **ViewSpecPro 6.2.0**, to verify the result of calculation properties:
 
-##### Tested
+#### Tested
 
 - @dn
 - @reflectance, reflectanceNoDeriv, reflectance1stDeriv, reflectance2ndDeriv
 - @absoluteReflectance
 - @log1R, log1RNoDeriv, log1R1stDeriv, log1R2ndDeriv
 
-##### **Not yet finished:**
+#### **Not yet finished:**
 
 - @radiance
 - @irradiance
@@ -55,7 +55,7 @@ The benchmark test of **ASD_File_Reader 1.0.0** has been fulfilled with **ViewSp
 
 Spectral discontinuities, or "step/jump", are the radiation steps in the spectral curve at the junction of the instrument, which will affect the quality of the spectral data. This correction module will provide the temperature-based **Hueni method** ([Hueni and Bialek, 2017]()) and the parabola-based **ASD Parabolic method** ([ASD Inc., 2015]()) to correct the jumps.
 
-##### Code Description
+#### Code Description
 
 ###### Solve for external temperature based on empirical formula
 
@@ -63,7 +63,7 @@ By querying the `coeffs` table (`src\asd_temp_corr_coeffs.mat`), we can get the 
 
 
 
-#### Reference
+### Reference
 
 [ASD Inc., (2017). ASD File Format: Version 8 (Revision): 1-10. ](https://www.malvernpanalytical.com/en/learn/knowledge-center/user-manuals/asd-file-format-v8)
 
