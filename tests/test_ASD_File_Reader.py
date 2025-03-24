@@ -1,5 +1,8 @@
 """
-Requirements:
+Package ASD: Version Lite
+Module: ASD_File_Reader.py
+
+Requirements:`
 This module contains tests for the ASDFile class in the ASD_File_Reader module.
 """
 
@@ -23,7 +26,7 @@ The aspects to be tested are:
 """
 
 import unittest
-from src.ASD_File_Reader import ASDFile
+from src.version_lite.ASD_File_Reader import ASDFile
 
 class TestASDFile(unittest.TestCase):
 
