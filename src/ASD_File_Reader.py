@@ -6,7 +6,7 @@
 @Author  :   Kai Cao 
 @Version :   1.0.0
 @Contact :   caokai_cgs@163.com
-@License :   (C)Copyright 2025-
+@License :   (C)Copyright 2024-
 Copyright Statement:   Full Copyright
 @Desc    :   According to "ASD File Format version 8: Revision B"
 '''
