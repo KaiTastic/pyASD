@@ -22,15 +22,15 @@ def setUpModule():
     This function is called once before any tests in the module are run.
     It can be used to set up any resources needed for the tests.
     """
-    global all_asd_data_files
-
+    # global all_asd_data_files
 
     # Acquire the current working directory
-    current_working_directory = os.getcwd()
+    # current_working_directory = os.getcwd()
 
     # Test file in the SampleData directory
     # all_asd_data_files = [os.path.join(current_working_directory, file_name) for file_name in all_asd_data_files]
     # print(all_asd_data_files)
+    pass
 
 
 class TestASDFile(unittest.TestCase):
