@@ -16,6 +16,7 @@ import struct
 import re
 import logging
 import numpy as np
+from __future__ import annotations
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 from collections import namedtuple
