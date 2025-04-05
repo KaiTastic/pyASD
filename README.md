@@ -13,6 +13,7 @@ The repo is create for reading the all versions of *.asd binary file in Python.
  The *.asd file supports for:
 
 > ASD AgriSpec, ASD FieldSpec range, ASD FieldSpec 4 Hi-Res NG, ASD FieldSpec 4 Hi-Res, ASD FieldSpec 4 Standard-Res, ASD FieldSpec 4 Wide-Res, ASD HandHeld 2 Pro, ASD HandHeld 2, ASD LabSpec range, ASD LabSpec 4 Bench, ASD LabSpec 4 Hi-Res, ASD LabSpec 4 Standard-Res, ASD TerraSpec range, ASD TerraSpec 4 Hi-Res, ASD TerraSpec 4 Standard-Res.
+> 
 > [ASD Inc., (2017). ASD File Format: Version 8 (Revision): 1-10. ](https://www.malvernpanalytical.com/en/learn/knowledge-center/user-manuals/asd-file-format-v8)
 
 ###   Description for Version 1.0.0 (ASD_File_Reader.py)
