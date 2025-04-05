@@ -13,21 +13,23 @@ Copyright Statement:   Full Copyright
 
 import os
 import struct
-import datetime
 import re
 import logging
 import numpy as np
 import xml.etree.ElementTree as ET
+from datetime import datetime, timedelta
 from collections import namedtuple
 from enum import Enum
 from .constant import (FileVersion_e, InstrumentType_e, InstrumentModel_e, SpectraType_e, SignatureState_e, AuditLogType_e, DataType_e, DataFormat_e, IT_ms_e, CalibrationType_e, SaturationError_e, ClassiferDataType_e)
+from .loggerSetup import setup_logging
+
 
 class ASDFile(object):
 
     DEFAULT_DERIVATIVE_GAP = 5
     
-    def __init__(self):
-        self.asdFileVersion = 0
+    def __init__(self, filepath: str = None) -> None:
+
         self.metadata = None
         self.spectrumData = None
         self.referenceFileHeader = None
@@ -44,21 +46,33 @@ class ASDFile(object):
         self.__asdFileStream = None
         self.wavelengths = None
 
-    def read(self: object, filePath: str) -> bool:
+        if filepath is not None:
+            self.read(filepath)
+
+    def read(self: object, filepath: str) -> bool:
         readSuccess = False
-        if os.path.exists(filePath) and os.path.isfile(filePath):
+        # Return False if the file does not exist or is not a file
+        if filepath is None:
+            logger.warning("File path is None.")
+            return readSuccess
+        
+        if os.path.exists(filepath) and os.path.isfile(filepath):
             try:
                 # read in file to memory(buffer)
-                with open(filePath, 'rb') as fileHandle:
+                with open(filepath, 'rb') as fileHandle:
                     self.__asdFileStream = fileHandle.read()
                     if self.__asdFileStream[-3:] == b'\xFF\xFE\xFD':
                         self.__bom = self.__asdFileStream[-3:]
                         self.__asdFileStream = self.__asdFileStream[:-3]
             except Exception as e:
                 logger.exception(f"Error in reading the file.\nError: {e}")
-        # refering C# Line 884 to identify the file version
-        self.asdFileVersion, offset = self.__validate_fileVersion()
-        if self.asdFileVersion.value > 0:
+        else:
+            logger.error(f"File does not exist or is not a file: {filepath}")
+            return readSuccess
+
+        # Identify the file version
+        asdFileVersion, offset = self.__validate_fileVersion()
+        if asdFileVersion.value > 0:
             try:
                 offset = self.__parse_metadata(offset)
                 self.wavelengths = np.arange(self.metadata.channel1Wavelength, self.metadata.channel1Wavelength + self.metadata.channels * self.metadata.wavelengthStep, self.metadata.wavelengthStep)
@@ -69,7 +83,7 @@ class ASDFile(object):
                     offset = self.__parse_spectrumData(offset)
                 except Exception as e:
                     logger.exception(f"Error in parsing the metadata and spectrum data.\nError: {e}")
-        if self.asdFileVersion.value >= 2:
+        if asdFileVersion.value >= 2:
             try:
                 offset = self.__parse_referenceFileHeader(offset)
             except Exception as e:
@@ -79,7 +93,7 @@ class ASDFile(object):
                     offset = self.__parse_referenceData(offset)
                 except Exception as e:
                     logger.exception(f"Error in parsing the reference data.\nError: {e}")
-        if self.asdFileVersion.value >= 6:
+        if asdFileVersion.value >= 6:
             try:
                 # Read Classifier Data
                 offset = self.__parse_classifierData(offset)
@@ -90,7 +104,7 @@ class ASDFile(object):
                     offset = self.__parse_dependentVariables(offset)
                 except Exception as e:
                     logger.exception(f"Error in parsing the depndant variables.\nError: {e}")
-        if self.asdFileVersion.value >= 7:
+        if asdFileVersion.value >= 7:
             try:
                 # Read Calibration Header
                 offset = self.__parse_calibrationHeader(offset)
@@ -113,7 +127,7 @@ class ASDFile(object):
                     #     logger.info(f"Calibration data is not available.")
                 except Exception as e:
                     logger.exception(f"Error in parsing the calibration data.\nError: {e}")       
-        if self.asdFileVersion.value >= 8:
+        if asdFileVersion.value >= 8:
             try:
                 # Read Audit Log
                 offset = self.__parse_auditLog(offset)
@@ -135,41 +149,51 @@ class ASDFile(object):
         pass
 
     def __check_offset(func):
-        def wrapper(self, offset, *args, **kwargs):
-            if offset is not None and offset < len(self.__asdFileStream):
-                return func(self, offset, *args, **kwargs)
+        def wrapper(self: object, offset: int = None, *args, **kwargs):
+            # Check if offset is None or out of range
+            # TODO: add 0 <= offset < len(self.__asdFileStream) check                
+            if isinstance(offset, int) and 0 <= offset:
+                if offset < len(self.__asdFileStream):
+                    return func(self, offset, *args, **kwargs)
+                else:
+                    logger.info("Reached the end of the binary byte stream. offset: {offset}")
+                    return None, None
             else:
-                logger.info("Reached the end of the binary byte stream. offset: {offset}")
+                logger.error(f"Invalid offset: {offset}. It should be a non-negative integer.")
                 return None, None
         return wrapper
     
     @__check_offset
-    def __parse_metadata(self: object, offset: int) -> int:
+    def __parse_metadata(self: object, offset) -> int:
+
         asdMetadataFormat = '<157s 18s B B b b l b l f f b b b b b H 128s 56s L h h H H f f f f h b 4b H H H b L H H H H f f 27s 5b'
-        asdMetadatainfo = namedtuple('metadata', "comments when daylighSavingsFlag programVersion fileVersion iTime \
+        asdMetadatainfo = namedtuple('metadata', "asdFileVersion comments when_datetime daylighSavingsFlag programVersion fileVersion iTime \
         darkCorrected darkTime dataType referenceTime channel1Wavelength wavelengthStep dataFormat \
-        old_darkCurrentCount old_refCount old_sampleCount application channels appData_str gpsData_str \
+        old_darkCurrentCount old_refCount old_sampleCount application channels appData gpsData \
         intergrationTime_ms fo darkCurrentCorrention calibrationSeries instrumentNum yMin yMax xMin xMax \
         ipNumBits xMode flags1 flags2 flags3 flags4 darkCurrentCount refCount sampleCount instrument \
         calBulbID swir1Gain swir2Gain swir1Offset swir2Offset splice1_wavelength splice2_wavelength smartDetectorType \
         spare1 spare2 spare3 spare4 spare5 byteStream byteStreamLength")
         try:
             comments, when, programVersion, fileVersion, iTime, darkCorrected, darkTime, \
-            dataType, referenceTime, channel1Wavelength, wavelengthStep, dataFormat, old_darkCurrentCount, old_refCount, old_sampleCount, \
-            application, channels, appData, gpsData, intergrationTime_ms, fo, darkCurrentCorrention, calibrationSeries, instrumentNum, \
-            yMin, yMax, xMin, xMax, ipNumBits, xMode, flags1, flags2, flags3, flags4, darkCurrentCount, refCount, \
+            dataType, referenceTime, channel1Wavelength, wavelengthStep, dataFormat, \
+            old_darkCurrentCount, old_refCount, old_sampleCount, \
+            application, channels, appData, gpsData, intergrationTime_ms, fo, darkCurrentCorrention, \
+            calibrationSeries, instrumentNum, yMin, yMax, xMin, xMax, ipNumBits, xMode, \
+            flags1, flags2, flags3, flags4, darkCurrentCount, refCount, \
             sampleCount, instrument, calBulbID, swir1Gain, swir2Gain, swir1Offset, swir2Offset, \
             splice1_wavelength, splice2_wavelength, smartDetectorType, \
             spare1, spare2, spare3, spare4, spare5 = struct.unpack_from(asdMetadataFormat, self.__asdFileStream, offset)
+            asdFileVersion, _ = self.__validate_fileVersion()
             comments = comments.strip(b'\x00') # remove null bytes
             # Parse the time from the buffer, format is year, month, day, hour, minute, second
             when_datetime, daylighSavingsFlag = self.__parse_ASDFilewhen((struct.unpack_from('9h', when)))  # 9 short integers
             programVersion = self.__parseVersion(programVersion)
             fileVersion = self.__parseVersion(fileVersion)
             darkCorrected = bool(darkCorrected)
-            darkTime = datetime.datetime.fromtimestamp(darkTime) 
+            darkTime = datetime.fromtimestamp(darkTime) 
             dataType = DataType_e(dataType)
-            referenceTime = datetime.datetime.fromtimestamp(referenceTime)
+            referenceTime = datetime.fromtimestamp(referenceTime)
             dataFormat = DataFormat_e(dataFormat)
             intergrationTime = IT_ms_e(intergrationTime_ms)
             calibrationSeries = CalibrationType_e(calibrationSeries)
@@ -177,9 +201,9 @@ class ASDFile(object):
             instrument = InstrumentType_e(instrument)
             ByteStream = self.__asdFileStream[:484]
             ByteStreamLength = len(ByteStream)
-            offset += 481
+            offset += struct.calcsize(asdMetadataFormat)
             self.metadata = asdMetadatainfo._make(
-                (comments, when_datetime, daylighSavingsFlag, programVersion, fileVersion, iTime, darkCorrected, darkTime, \
+                (asdFileVersion, comments, when_datetime, daylighSavingsFlag, programVersion, fileVersion, iTime, darkCorrected, darkTime, \
                 dataType, referenceTime, channel1Wavelength, wavelengthStep, dataFormat, old_darkCurrentCount, old_refCount, old_sampleCount, \
                 application, channels, appData, gpsData, intergrationTime, fo, darkCurrentCorrention, calibrationSeries, instrumentNum, \
                 yMin, yMax, xMin, xMax, ipNumBits, xMode, flags1, flags2, flags3, flags4, darkCurrentCount, refCount, \
@@ -211,12 +235,14 @@ class ASDFile(object):
         asdreferenceFileHeaderInfo = namedtuple('referenceFileHeader', "referenceFlag referenceTime spectrumTime referenceDescription byteStream byteStreamLength")
         try:
             referenceFlag, offset = self.__parse_Bool(offset)
-            referenceTime_llongint, spectrumTime_llongint = struct.unpack_from(asdReferenceFormat, self.__asdFileStream, offset)
+            referenceTime_doublefloat, spectrumTime_doublefloat = struct.unpack_from(asdReferenceFormat, self.__asdFileStream, offset)
+            referenceTime_datetime = self.__parseTimeOLE(referenceTime_doublefloat)  # Convert to datetime
+            spectrumTime_datetime = self.__parseTimeOLE(spectrumTime_doublefloat)    # Convert to datetime
             offset += struct.calcsize(asdReferenceFormat)
             referenceDescription, offset = self.__parse_bstr(offset)
             byteStream = self.__asdFileStream[initOffset:offset]
             byteStreamLength = len(byteStream)
-            self.referenceFileHeader = asdreferenceFileHeaderInfo._make((referenceFlag, referenceTime_llongint, spectrumTime_llongint, referenceDescription, byteStream, byteStreamLength))
+            self.referenceFileHeader = asdreferenceFileHeaderInfo._make((referenceFlag, referenceTime_datetime, spectrumTime_datetime, referenceDescription, byteStream, byteStreamLength))
             # logger.info(f"Read: reference file header end offset: {offset}")
             return offset
         except Exception as e:
@@ -310,7 +336,9 @@ class ASDFile(object):
             # if there are no dependent variables, skip 4 bytes (corresponding to 4 empty byte positions b'\x00')
             if dependentVariableCount == 0:
                 offset += 4
-                self.dependants = dependantInfo._make((saveDependentVariables, dependentVariableCount, b'', 0, self.__asdFileStream[initOffset:offset], len(self.__asdFileStream[initOffset:offset])))
+                dependantVariableLabels_list = []
+                dependantVariableValues_list = []
+                self.dependants = dependantInfo._make((saveDependentVariables, dependentVariableCount, dependantVariableLabels_list, dependantVariableValues_list, self.__asdFileStream[initOffset:offset], len(self.__asdFileStream[initOffset:offset])))
             # logger.info(f"Read: dependant variables end offset: {offset}")
             return offset
         except Exception as e:
@@ -338,7 +366,8 @@ class ASDFile(object):
                     offset += struct.calcsize(calibrationSeries_buffer_format)
                 self.calibrationHeader = calibrationHeaderInfo._make((calibrationHeaderCount, calibrationSeries, byteStream, byteStreamLength))
             else:
-                self.calibrationHeader = calibrationHeaderInfo._make((calibrationHeaderCount, [], byteStream, byteStreamLength))
+                calibrationSeries = []
+                self.calibrationHeader = calibrationHeaderInfo._make((calibrationHeaderCount, calibrationSeries, byteStream, byteStreamLength))
             # logger.info(f"Read: calibration header end offset: {offset}")
             return offset
         except Exception as e:
@@ -370,7 +399,9 @@ class ASDFile(object):
             signatureInfo = namedtuple('signature', 'signed, signatureTime, userDomain, userLogin, userName, source, reason, notes, publicKey, signature, byteStream, byteStreamLength')
             signed, = struct.unpack_from('b', self.__asdFileStream, offset)
             offset += struct.calcsize('b')
-            signatureTime, = struct.unpack_from('q', self.__asdFileStream, offset)
+            # signatureTime, = struct.unpack_from('q', self.__asdFileStream, offset)
+            signatureTime_int, = struct.unpack_from('q', self.__asdFileStream, offset)
+            signatureTime = datetime.fromtimestamp(signatureTime_int)  # Convert to datetime
             offset += struct.calcsize('q')
             userDomain, offset = self.__parse_bstr(offset)
             userLogin, offset = self.__parse_bstr(offset)
@@ -521,17 +552,16 @@ class ASDFile(object):
         daylighSavingsFlag = when[8]    # daylight savings flag
         if year < 1900:
             year = year + 1900
-        date_datetime = datetime.datetime(year, month + 1, day, hour, minutes, seconds)
+        date_datetime = datetime(year, month + 1, day, hour, minutes, seconds)
         return date_datetime, daylighSavingsFlag
     
     def __parse_gps(self: object, gps_field: bytes) -> tuple:
         # Domumentation: ASD File Format Version 8, page 4
-        gps_tuple = namedtuple('gpsdata', 'heading speed latitude longitude altitude')
+        gpsDataInfo = namedtuple('gpsdata', 'trueHeading, speed, latitude, longitude, altitude, lock, hardwareMode, ss, mm, hh, flags1, flags2, satellites, filler1, filler2')
         try:
             gpsDatadFormat = '<d d d d d h b b b b b h 5s b b'
-            gpsDataInfo = namedtuple('gpsData', 'trueHeading speed latitude longitude altitude lock hardwareMode ss mm hh flags1 flags2 satellites filler')
-            trueHeading, speed, latitude, longitude, altitude, lock, hardwareMode, ss, mm, hh, flags1, flags2, satellites, filler = struct.unpack(gpsDatadFormat, gps_field)
-            gpsData = gpsDataInfo._make((trueHeading, speed, latitude, longitude, altitude, lock, hardwareMode, ss, mm, hh, flags1, flags2, satellites, filler))
+            trueHeading, speed, latitude, longitude, altitude, lock, hardwareMode, ss, mm, hh, flags1, flags2, satellites, filler1, filler2 = struct.unpack(gpsDatadFormat, gps_field)
+            gpsData = gpsDataInfo._make((trueHeading, speed, latitude, longitude, altitude, lock, hardwareMode, ss, mm, hh, flags1, flags2, satellites, filler1, filler2))
             return gpsData
         except Exception as e:
             logger.exception(f"GPS parse error: {e}")
@@ -562,9 +592,26 @@ class ASDFile(object):
             errors.append(SaturationError_e.SWIR2_TEC_ALARM)
         return errors
 
+    def __parseTimeOLE(self: object, timeole: float) -> datetime:
+        try:
+            ole_base_date = datetime(1899, 12, 30)
+            days = int(timeole)
+            fraction = timeole - days
+            total_hours = fraction * 24
+            hours = int(total_hours)
+            minutes = int((total_hours - hours) * 60)
+            seconds = int(((total_hours - hours) * 60 - minutes) * 60)
+            microseconds = int((((total_hours - hours) * 60 - minutes) * 60 - seconds) * 1000000)
+            time_delta = timedelta(days=days, hours=hours, minutes=minutes, seconds=seconds, microseconds=microseconds)
+            result_datetime = ole_base_date + time_delta
+            return result_datetime
+        except Exception as e:
+            logger.exception(f"OLE time parse error: {e}")
+            return None
+
     #! Need to check the result of the function
     @property
-    def dn(self):
+    def digitalNumber(self):
         return self.spectrumData.spectra if self.spectrumData is not None else None
 
     @property
@@ -576,7 +623,7 @@ class ASDFile(object):
 
     @property
     def reflectance(self):
-        if self.asdFileVersion.value >= 2:
+        if self.metadata.asdFileVersion.value >= 2:
             try:
                 if self.metadata.referenceTime and self.metadata.dataType == DataType_e.dt_REF_TYPE:
                     reflectance = np.divide(self.__normalise_spectrum(self.spectrumData.spectra), self.__normalise_spectrum(self.referenceData.spectra), where=self.__normalise_spectrum(self.referenceData.spectra) != 0)
@@ -781,11 +828,14 @@ class ASDFile(object):
 
         iStartingWavelength = int(self.metadata.channel1_wavelength)
         iEndingWavelength = int(self.metadata.channels - 1) + int(self.metadata.channel1_wavelength)
+
         InstrumentType = self.get_instrument_type(iStartingWavelength, iEndingWavelength)
+
         iSplice1 = int(self.metadata.splice1_wavelength)
         iSplice2 = int(self.metadata.splice2_wavelength)
         iVertex1 = 675
         iVertex2 = 1975
+
         if (((InstrumentType & InstrumentModel_e.itVnir.value) == InstrumentModel_e.itVnir.value) and
             ((InstrumentType & InstrumentModel_e.itSwir1.value) == InstrumentModel_e.itSwir1.value) and
             ((InstrumentType & InstrumentModel_e.itSwir2.value) == InstrumentModel_e.itSwir2.value)) or \
@@ -793,13 +843,17 @@ class ASDFile(object):
             ((InstrumentType & InstrumentModel_e.itSwir1.value) == InstrumentModel_e.itSwir1.value)) or \
            (((InstrumentType & InstrumentModel_e.itSwir1.value) == InstrumentModel_e.itSwir1.value) and
             ((InstrumentType & InstrumentModel_e.itSwir2.value) == InstrumentModel_e.itSwir2.value)):
+
             iAvgLen = iSplice1 - iVertex1
             iIndex = iSplice1 - iStartingWavelength
-            # Calculate the pfactor of VNIR and SWIR1 
+            # 计算 VNIR 或 SWIR1 的 pfactor
             dPC = radiance[iIndex]
+
             if dPC == 0:
                 dPC = 1
+
             dPCFactor1 = (self.average(radiance, iIndex + 1, DEFAULT_GAP) - radiance[iIndex]) / (dPC * iAvgLen * iAvgLen)
+
             nPoint = abs(iVertex1 - iStartingWavelength)
             iWavelength = iVertex1
             dE = len(radiance)
@@ -809,25 +863,32 @@ class ASDFile(object):
                     radiance[nPoint] *= (dPCFactor1 * (iWavelength - iVertex1) ** 2 + 1)
                 nPoint += 1
                 iWavelength += 1
+
             if InstrumentType == InstrumentModel_e.itVnirSwir1Swir2.value:
                 # 计算 SWIR2 的 PC
                 iAvgLen = iSplice2 - iVertex2
+
                 iIndex = iSplice2 - iStartingWavelength
-                # Calculate the pfactor of SWIR2
+                # 计算 SWIR2 的 pfactor
                 dPC = self.average(radiance, iIndex + 1, DEFAULT_GAP)
+
                 if dPC == 0:
                     dPC = 1
+
                 dPCFactor2 = (self.average(radiance, iIndex - 2, DEFAULT_GAP) -
                               self.average(radiance, iIndex + 1, DEFAULT_GAP)) / (dPC * iAvgLen * iAvgLen)
+
                 nPoint = (iSplice2 - iStartingWavelength) + 1
                 iWavelength = iSplice2 + 1
+
                 while iWavelength <= iVertex2:
                     radiance[nPoint] *= (dPCFactor2 * (iWavelength - iVertex2) ** 2 + 1)
                     nPoint += 1
                     iWavelength += 1
+
         return radiance
         
-
+# TODO: Implement the following functions
 # Radiometric Calculation
 # Parabolic Correction
 # Splice Correction
@@ -846,25 +907,16 @@ class ASDFile(object):
 # Custom...
 
 
-def setup_logging(log_file):
-    # To generate a log file name that includes the date
-    print(f"Log file Path: {log_file}")
-    # Set up logging format and level
-    logging.basicConfig(
-        level=logging.INFO,
-        # Log format
-        # format='%(asctime)s - %(levelname)s - %(message)s',
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s - Line: %(lineno)d',
-        # format='%(levelname)s - %(message)s',
-        handlers=[
-            logging.StreamHandler(),  # Log to console
-            logging.FileHandler(log_file, encoding='utf-8')  # Log to file
-        ]
-    )
 
 
 if __name__ == "__main__":
-
-    logFile=os.path.join(os.path.dirname(__file__), 'ASD_File_Reader.log')
+    # Set up a loccal logger for the module
+    datetime_str = datetime.now().strftime("%Y-%m-%d")
+    logFile=os.path.join(os.path.dirname(__file__), f'ASD_File_Reader_{datetime_str}.log')
     setup_logging(logFile) 
     logger = logging.getLogger(__name__)
+
+else:
+    # acquire the logger from the parent module
+    logger = logging.getLogger("Global Logger")
+
