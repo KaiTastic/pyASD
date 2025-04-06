@@ -399,11 +399,22 @@ class ASDFile(object):
         try:
             initOffset = offset
             signatureInfo = namedtuple('signature', 'signed, signatureTime, userDomain, userLogin, userName, source, reason, notes, publicKey, signature, byteStream, byteStreamLength')
-            signed, = struct.unpack_from('b', self.__asdFileStream, offset)
+            signed_int, = struct.unpack_from('b', self.__asdFileStream, offset)
+            # 0 – Unsigned
+            # 1 - Signed
+            signed_map = {0: SignatureState_e.UN_SIGNED, 1: SignatureState_e.SIGNED} 
+            if signed_int not in signed_map:
+                signed = SignatureState_e.SIGNED_INVALID
+            # set the file version based on the version string
+            else:
+                signed = signed_map[signed_int]
             offset += struct.calcsize('b')
-            # signatureTime, = struct.unpack_from('q', self.__asdFileStream, offset)
             signatureTime_int, = struct.unpack_from('q', self.__asdFileStream, offset)
-            signatureTime = datetime.fromtimestamp(signatureTime_int)  # Convert to datetime
+            #! The timestamp is to be parsed 
+            signatureTime = signatureTime_int
+            # start_date = datetime(1, 1, 1)
+            # signatureTime = start_date + timedelta(seconds=signatureTime_int // 10000000)
+            # signatureTime = datetime.fromtimestamp(signatureTime_int, tz=)  # Convert to datetime
             offset += struct.calcsize('q')
             userDomain, offset = self.__parse_bstr(offset)
             userLogin, offset = self.__parse_bstr(offset)
