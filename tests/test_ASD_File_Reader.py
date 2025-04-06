@@ -8,9 +8,10 @@ import os
 import unittest
 import struct
 from datetime import datetime, timedelta
-from src.ASD_File_Reader import ASDFile
+from src.asd_file_reader import ASDFile
 # Constants
 from src.constant import *
+
 
 
 # Sample Data directory

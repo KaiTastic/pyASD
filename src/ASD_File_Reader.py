@@ -13,6 +13,7 @@ Copyright Statement:   Full Copyright
 @Desc    :   According to "ASD File Format version 8: Revision B"
 '''
 
+
 import os
 import struct
 import re
@@ -23,10 +24,12 @@ from datetime import datetime, timedelta
 from collections import namedtuple
 from enum import Enum
 from .constant import (FileVersion_e, InstrumentType_e, InstrumentModel_e, SpectraType_e, SignatureState_e, AuditLogType_e, DataType_e, DataFormat_e, IT_ms_e, CalibrationType_e, SaturationError_e, ClassiferDataType_e)
-from .loggerSetup import setup_logging
+from .logger_setup import setup_logging
+from .file_attributes import FileAttributes
 
 
-class ASDFile(object):
+
+class ASDFile(FileAttributes):
 
     DEFAULT_DERIVATIVE_GAP = 5
     
