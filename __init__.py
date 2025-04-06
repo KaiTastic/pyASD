@@ -2,7 +2,7 @@
 
 main_version = 1
 major_version = 0
-minor_version = 1
+minor_version = 2
 __version__ = f"{main_version}.{major_version}.{minor_version}"
 
 
