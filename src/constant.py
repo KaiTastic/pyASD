@@ -1,4 +1,5 @@
-"""the constant values for the ASD file format
+"""
+The constant values for the ASD file format
 """
 from enum import Enum
 
@@ -47,7 +48,8 @@ class SpectraType_e(Enum):
     QUALITY_INDEX = 5
 
 class SignatureState_e(Enum):
-    NOT_SIGNED = 0
+    SIGNED_INVALID = -1
+    UN_SIGNED = 0
     SIGNED = 1
     # VERIFIED = 2
     # NOT_VERIFIED = 3
@@ -64,8 +66,8 @@ class AuditLogType_e(Enum):
     AUDIT_NOTES_ELEMENT = "Audit_Notes"
 
 class IT_ms_e(Enum):
-    Invalid = 0         # 0 ms, not inluded, added by Kai Cao
-    ms_8 = 8            # 8 ms, not inluded, added by Kai Cao
+    Invalid = 0         # 0 ms, not inluded in the original manual and codes, added by Kai Cao
+    ms_8 = 8            # 8 ms, not inluded in the original manual and codes, added by Kai Cao
     ms_8_5 = 9
     ms_17 = 17
     ms_34 = 34
