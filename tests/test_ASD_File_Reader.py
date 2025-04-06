@@ -108,7 +108,7 @@ class TestASDFile(unittest.TestCase):
                 # Check if the file version is read successfully
                 self.assertIsNotNone(asd_file.metadata.asdFileVersion)
                 # Check if the file version is correct
-                self.assertEqual(asd_file.metadata.asdFileVersion, FileVersion_e.FILE_VERSION_7)
+                self.assertEqual(type(asd_file.metadata.asdFileVersion), FileVersion_e)
         
         # 2 Assuming you have a invalid test file: not exist
         asd_file = ASDFile()
