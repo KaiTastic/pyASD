@@ -2,21 +2,23 @@
 
 ##### To cite this repository:
 
+```
 Cao, Kai. (2025). "ASD_File_Reader". https://github.com/KaiTastic/ASD_File_Reader
+```
 
-### Repository Introduction
+#### Repository Introduction
 
-The repo is create for reading the all versions of *.asd binary file in Python.
+The repo is created to read all versions of the *.asd binary file in Python.
 
 ##### About the *.asd file
 
- The *.asd file supports for:
+ The *.asd file supports:
 
 > ASD AgriSpec, ASD FieldSpec range, ASD FieldSpec 4 Hi-Res NG, ASD FieldSpec 4 Hi-Res, ASD FieldSpec 4 Standard-Res, ASD FieldSpec 4 Wide-Res, ASD HandHeld 2 Pro, ASD HandHeld 2, ASD LabSpec range, ASD LabSpec 4 Bench, ASD LabSpec 4 Hi-Res, ASD LabSpec 4 Standard-Res, ASD TerraSpec range, ASD TerraSpec 4 Hi-Res, ASD TerraSpec 4 Standard-Res.
 > 
 > [ASD Inc., (2017). ASD File Format: Version 8 (Revision): 1-10. ](https://www.malvernpanalytical.com/en/learn/knowledge-center/user-manuals/asd-file-format-v8)
 
-###   Description for Version 1.0.0 (ASD_File_Reader.py)
+####   Description for Version 1.0.0 (ASD_File_Reader.py)
 
 | ASD File Structure             | class ASDFile()                                      |
 | ------------------------------ | ---------------------------------------------------- |
@@ -39,7 +41,7 @@ As shown in the folder `.\tests\`, besides the conventional tests for packing an
 
 ##### Tested
 
-- @dn
+- @digitinalNumber
 - @reflectance, reflectanceNoDeriv, reflectance1stDeriv, reflectance2ndDeriv
 - @absoluteReflectance
 - @log1R, log1RNoDeriv, log1R1stDeriv, log1R2ndDeriv
@@ -50,19 +52,17 @@ As shown in the folder `.\tests\`, besides the conventional tests for packing an
 - @irradiance
 - @parabolic_correction
 
-### Upcoming Features:
+#### Upcoming Features:
 
-#### Spectral Discontinuities Correction
+##### - Spectral Discontinuities Correction:
 
 Spectral discontinuities, or "step/jump", are the radiation steps in the spectral curve at the junction of the instrument, which will affect the quality of the spectral data. This correction module will provide the temperature-based **Hueni method** ([Hueni and Bialek, 2017]()) and the parabola-based **ASD Parabolic method** ([ASD Inc., 2015]()) to correct the jumps.
 
-##### Code Description
-
-###### Solve for external temperature based on empirical formula
+###### Solve for external temperature based on the empirical formula
 
 By querying the `coeffs` table (`src\asd_temp_corr_coeffs.mat`), we can get the `a, b, c` values, and solve T according to the `eq. 8` in ([Hueni and Bialek, 2017]()).
 
-#### File Format Converter:
+##### - File Format Converter:
 
 Although the ASD Inc. official software **ViewSpecPro** has already offered the function "Process --> ASCII Export", to enhance the flexibility of ASD File Reader, the equivalent "ASCII Export" function, or a more powerful tool/module will be provided for further spectroscopy processing.
 
