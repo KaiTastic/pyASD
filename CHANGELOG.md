@@ -1,9 +1,10 @@
 # Changelog
 
+[![Version](https://img.shields.io/badge/version-v1.0.1-blue.svg)](https://github.com/KaiTastic/ASD_File_Reader/releases) [![Semantic Versioning](https://img.shields.io/badge/semver-2.0.0-green.svg)](https://semver.org/spec/v2.0.0.html) [![Keep a Changelog](https://img.shields.io/badge/changelog-Keep%20a%20Changelog-orange.svg)](https://keepachangelog.com/en/1.0.0/) [![Latest Release](https://img.shields.io/github/v/release/KaiTastic/ASD_File_Reader)](https://github.com/KaiTastic/ASD_File_Reader/releases/latest) [![Release Date](https://img.shields.io/github/release-date/KaiTastic/ASD_File_Reader)](https://github.com/KaiTastic/ASD_File_Reader/releases)
+
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html), and the format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [1.0.1] - 2025-08-29
 
