@@ -1,6 +1,6 @@
 <p align="left">
 	<img src="https://img.shields.io/badge/version-1.0.0-orange.svg?style=flat-square" alt="Current Version">
-	<img src="https://img.shields.io/badge/python-3.6%2B-blue.svg?style=flat-square" alt="Python 3.6+">
+	<img src="https://img.shields.io/badge/python-3.8%2B-blue.svg?style=flat-square" alt="Python 3.8+">
 	<img src="https://img.shields.io/badge/license-MIT-green.svg?style=flat-square" alt="MIT License">
 </p>
 
