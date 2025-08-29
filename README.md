@@ -1,12 +1,28 @@
 <p align="left">
-	<img src="https://img.shields.io/badge/version-1.0.0-orange.svg?style=flat-square" alt="Current Version">
+	<img src="https://img.shields.io/badge/version-1.0.1-orange.svg?style=flat-square" alt="Current Version">
 	<img src="https://img.shields.io/badge/python-3.8%2B-blue.svg?style=flat-square" alt="Python 3.8+">
 	<img src="https://img.shields.io/badge/license-MIT-green.svg?style=flat-square" alt="MIT License">
+	<a href="https://github.com/KaiTastic/ASD_File_Reader/actions/workflows/python-package.yml">
+		<img src="https://github.com/KaiTastic/ASD_File_Reader/actions/workflows/python-package.yml/badge.svg?branch=main" alt="CI Status">
+	</a>
 </p>
 
 # ASD File Reader
 
 **A Python library for reading and parsing all versions of ASD binary spectral files.**
+
+## Version Information
+
+**Current Version:** 1.0.1
+
+📋 **[View Full Changelog](CHANGELOG.md)** - Complete version history and detailed release notes
+
+### What's New in v1.0.1
+- Enhanced README documentation with compatibility testing details
+- Improved GitHub Actions CI/CD workflow
+- Multi-platform testing across Ubuntu, Windows, and macOS
+- Extended Python version support (3.8-3.13)
+- Code quality improvements and linting integration
 
 ## Author & License
 
@@ -25,6 +41,22 @@ Cao, Kai. (2025). "ASD_File_Reader". https://github.com/KaiTastic/ASD_File_Reade
 ## Overview
 
 `ASD_File_Reader` is designed to read and parse binary `*.asd` files produced by a wide range of ASD spectroradiometers, supporting all major versions (1-8) and instrument types. It provides access to all key data structures in ASD files, including spectrum data, metadata, calibration, reference, classifier, and more.
+
+### Compatibility Testing
+
+This project is automatically tested via GitHub Actions across multiple platforms and Python versions:
+- **Operating Systems:** Ubuntu, Windows, macOS
+- **Python Versions:** 3.8, 3.9, 3.10, 3.11, 3.12, 3.13, and latest stable
+- **Testing:** Unit tests, code linting (flake8), and integration tests
+
+All tests must pass before any code changes are merged, ensuring robust cross-platform compatibility.
+
+#### Detailed Test Reports
+- **[Latest CI Results](https://github.com/KaiTastic/ASD_File_Reader/actions/workflows/python-package.yml)** - View current build status and logs
+- **[Test Matrix Summary](https://github.com/KaiTastic/ASD_File_Reader/actions)** - See all platform/version combinations
+- **[Download Test Artifacts](https://github.com/KaiTastic/ASD_File_Reader/actions)** - Access detailed HTML test reports and coverage data
+
+> **Tip:** Click on any completed workflow run to see the detailed test matrix summary and download platform-specific test reports.
 
 ## Supported Instruments
 

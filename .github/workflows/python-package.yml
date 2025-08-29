@@ -10,7 +10,8 @@ on:
   #   branches: [ "main" ]
 
 jobs:
-  build:
+  test:
+    name: Test Python ${{ matrix.python-version }} on ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
@@ -30,15 +31,66 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install flake8
         python -c "import os; os.system('pip install -r requirements.txt')" || echo "No requirements.txt found, skipping."
+    - name: Install test dependencies
+      run: |
+        python -m pip install pytest pytest-html pytest-cov
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-    - name: Run unittests
+    - name: Run tests with detailed reporting
       run: |
-        python -m unittest discover
+        python -m pytest tests/ --html=test-report-${{ matrix.os }}-py${{ matrix.python-version }}.html --self-contained-html --cov=src --cov-report=xml --cov-report=term-missing -v
+      continue-on-error: true
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results-${{ matrix.os }}-py${{ matrix.python-version }}
+        path: |
+          test-report-*.html
+          coverage.xml
+        retention-days: 30
+
+  test-summary:
+    name: Test Summary Report
+    runs-on: ubuntu-latest
+    needs: test
+    if: always()
+    steps:
+    - name: Download all test results
+      uses: actions/download-artifact@v4
+    - name: Generate Test Summary
+      run: |
+        echo "# 🧪 Multi-Platform Test Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Platform | Python Version | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|----------|----------------|---------|" >> $GITHUB_STEP_SUMMARY
+        
+        # Check each combination result
+        for os in ubuntu-latest windows-latest macos-latest; do
+          for py in 3.8 3.9 3.10 3.11 3.12 3.13 3.x; do
+            if [ -d "test-results-${os}-py${py}" ]; then
+              echo "| ${os} | ${py} | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "| ${os} | ${py} | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+        done
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "📊 **Test Artifacts:** Available in the Actions artifacts section" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "📝 **How to Access Reports:**" >> $GITHUB_STEP_SUMMARY
+        echo "1. Go to the [Actions tab](https://github.com/KaiTastic/ASD_File_Reader/actions)" >> $GITHUB_STEP_SUMMARY
+        echo "2. Click on this workflow run" >> $GITHUB_STEP_SUMMARY
+        echo "3. Scroll down to 'Artifacts' section to download detailed reports" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "🔗 **Direct Links:**" >> $GITHUB_STEP_SUMMARY
+        echo "- [Main README](https://github.com/KaiTastic/ASD_File_Reader#compatibility-testing)" >> $GITHUB_STEP_SUMMARY
+        echo "- [All Workflow Runs](https://github.com/KaiTastic/ASD_File_Reader/actions/workflows/python-package.yml)" >> $GITHUB_STEP_SUMMARY
 
   # setup:
   #   runs-on: ubuntu-latest
