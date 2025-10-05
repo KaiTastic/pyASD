@@ -150,10 +150,10 @@ class TestASDFile(unittest.TestCase):
 
 # NOTE: 1. Directly test the decorator
 class TestASDFileCheckOffsetDecorator(unittest.TestCase):
-    
+
     def setUp(self):
-        # Setup a mock ASDFile object
-        self.asd_file = ASDFile("full_file_path")
+        # Setup a mock ASDFile object without initializing parent class
+        self.asd_file = ASDFile()
         self.asd_file._ASDFile__asdFileStream = b'\x00' * 100
 
     # Mock a function to test the decorator
@@ -952,7 +952,12 @@ class TestASDFileParseSpectralData(unittest.TestCase):
         del self.asd_file
 
     def test_001_parse_spectral_data(self):
-        pass
+        for file_path in all_asd_data_files:
+            with self.subTest(file_path):
+                self.asd_file.read(file_path)
+                self.assertIsNotNone(self.asd_file.spectrumData)
+                self.assertIsNotNone(self.asd_file.spectrumData.spectra)
+                self.assertEqual(len(self.asd_file.spectrumData.spectra), self.asd_file.metadata.channels)
 
 
 # TODO: to be completed
@@ -968,7 +973,12 @@ class TestASDFileParseConstituentType(unittest.TestCase):
         del self.asd_file
 
     def test_001_parse_constituent_type(self):
-        pass
+        for file_path in all_asd_data_files:
+            with self.subTest(file_path):
+                self.asd_file.read(file_path)
+                if self.asd_file.classifierData is not None:
+                    self.assertIsNotNone(self.asd_file.classifierData.yModelType)
+                    self.assertEqual(type(self.asd_file.classifierData.yModelType), int)
 
 
 # TODO: to be completed
@@ -984,23 +994,20 @@ class TestASDFileParseBSTR(unittest.TestCase):
         del self.asd_file
 
     def test_001_parse_bstr(self):
-        pass
-
-
-# TODO: to be completed
-# class TestASDFileParseBool(unittest.TestCase):
-
-    def setUp(self):
-        # Check if the ASDFile object is initialized correctly
-        self.asd_file=ASDFile()
-        self.assertIsNotNone(self.asd_file)
-
-    def tearDown(self):
-        # Clean up the ASDFile object
-        del self.asd_file
+        for file_path in all_asd_data_files:
+            with self.subTest(file_path):
+                self.asd_file.read(file_path)
+                if self.asd_file.classifierData is not None:
+                    self.assertIsNotNone(self.asd_file.classifierData.title)
+                    self.assertEqual(type(self.asd_file.classifierData.title), str)
 
     def test_001_parse_bool(self):
-        pass
+        for file_path in all_asd_data_files:
+            with self.subTest(file_path):
+                self.asd_file.read(file_path)
+                if self.asd_file.referenceFileHeader is not None:
+                    self.assertIsNotNone(self.asd_file.referenceFileHeader.referenceFlag)
+                    self.assertEqual(type(self.asd_file.referenceFileHeader.referenceFlag), bool)
 
 
 # TODO: to be completed
@@ -1016,7 +1023,13 @@ class TestASDFileParseAuditEvents(unittest.TestCase):
         del self.asd_file
 
     def test_001_parse_audit_events(self):
-        pass
+        for file_path in all_asd_data_files:
+            with self.subTest(file_path):
+                self.asd_file.read(file_path)
+                if self.asd_file.metadata.asdFileVersion.value >= 7:
+                    if self.asd_file.auditLog is not None:
+                        self.assertIsNotNone(self.asd_file.auditLog.auditEvents)
+                        self.assertEqual(type(self.asd_file.auditLog.auditEvents), list)
 
 
 # TODO: to be completed
@@ -1032,7 +1045,11 @@ class TestASDFileValidateFileVersion(unittest.TestCase):
         del self.asd_file
 
     def test_001_validate_file_version(self):
-        pass
+        for file_path in all_asd_data_files:
+            with self.subTest(file_path):
+                self.asd_file.read(file_path)
+                self.assertIsNotNone(self.asd_file.metadata.asdFileVersion)
+                self.assertIn(self.asd_file.metadata.asdFileVersion.value, [6, 7, 8])
 
 
 # TODO: to be completed
@@ -1048,7 +1065,11 @@ class TestASDFileParseeVersion(unittest.TestCase):
         del self.asd_file
 
     def test_001_parse_version(self):
-        pass
+        for file_path in all_asd_data_files:
+            with self.subTest(file_path):
+                self.asd_file.read(file_path)
+                self.assertIsNotNone(self.asd_file.metadata.programVersion)
+                self.assertEqual(type(self.asd_file.metadata.programVersion), str)
 
 
 # TODO: to be completed
@@ -1061,7 +1082,12 @@ class TestASDFileParseASDFileWhen(unittest.TestCase):
         pass
 
     def test_parse_asd_file_when(self):
-        pass
+        asd_file = ASDFile()
+        for file_path in all_asd_data_files:
+            with self.subTest(file_path):
+                asd_file.read(file_path)
+                self.assertIsNotNone(asd_file.metadata.when_datetime)
+                self.assertEqual(type(asd_file.metadata.when_datetime), datetime)
 
 
 # TODO: to be completed
@@ -1115,9 +1141,11 @@ class TestASDFileSmartDetector(unittest.TestCase):
         # self.asd_file._ASDFile__asdFileStream = b'\x00' * 100
 
     def test_parse_asd_file_smart_detector(self):
-        # Mock the __parse_smart_detector method
-        # offset = self.asd_file._ASDFile__parse_SmartDetector(0)
-        pass
+        for file_path in all_asd_data_files:
+            with self.subTest(file_path):
+                self.asd_file.read(file_path)
+                if self.asd_file.metadata.smartDetectorType is not None:
+                    self.assertEqual(type(self.asd_file.metadata.smartDetectorType), bytes)
 
 
 # TODO: not applied in the main code
@@ -1296,6 +1324,125 @@ class TestASDFileBenchmark(unittest.TestCase):
         # Assertions
         self.assertIsNotNone(self.asd_file.metadata.calcParabolicCorrection)
         self.assertEqual(offset, 484)
+
+
+class TestASDFileProperties(unittest.TestCase):
+
+    def setUp(self):
+        self.asd_file = ASDFile()
+        self.assertIsNotNone(self.asd_file)
+
+    def tearDown(self):
+        del self.asd_file
+
+    def test_001_digitalNumber(self):
+        for file_path in all_asd_data_files:
+            with self.subTest(file_path):
+                self.asd_file.read(file_path)
+                dn = self.asd_file.digitalNumber
+                self.assertIsNotNone(dn)
+                self.assertEqual(type(dn).__name__, 'ndarray')
+                self.assertEqual(len(dn), self.asd_file.metadata.channels)
+
+    def test_002_whiteReference(self):
+        for file_path in all_asd_data_files:
+            with self.subTest(file_path):
+                self.asd_file.read(file_path)
+                if self.asd_file.metadata.asdFileVersion.value >= 2:
+                    white_ref = self.asd_file.whiteReference
+                    if self.asd_file.referenceData is not None:
+                        self.assertIsNotNone(white_ref)
+                        self.assertEqual(type(white_ref).__name__, 'ndarray')
+
+    def test_003_reflectance(self):
+        for file_path in all_asd_data_files:
+            with self.subTest(file_path):
+                self.asd_file.read(file_path)
+                if self.asd_file.metadata.asdFileVersion.value >= 2:
+                    refl = self.asd_file.reflectance
+                    if refl is not None:
+                        self.assertEqual(type(refl).__name__, 'ndarray')
+                        self.assertEqual(len(refl), self.asd_file.metadata.channels)
+
+    def test_004_reflectanceNoDeriv(self):
+        for file_path in all_asd_data_files:
+            with self.subTest(file_path):
+                self.asd_file.read(file_path)
+                refl_no_deriv = self.asd_file.reflectanceNoDeriv
+                if refl_no_deriv is not None:
+                    self.assertEqual(type(refl_no_deriv).__name__, 'ndarray')
+
+    def test_005_reflectance1stDeriv(self):
+        for file_path in all_asd_data_files:
+            with self.subTest(file_path):
+                self.asd_file.read(file_path)
+                refl_1st = self.asd_file.reflectance1stDeriv
+                if refl_1st is not None:
+                    self.assertEqual(type(refl_1st).__name__, 'ndarray')
+                    self.assertEqual(len(refl_1st), self.asd_file.metadata.channels)
+
+    def test_006_reflectance2ndDeriv(self):
+        for file_path in all_asd_data_files:
+            with self.subTest(file_path):
+                self.asd_file.read(file_path)
+                refl_2nd = self.asd_file.reflectance2ndDeriv
+                if refl_2nd is not None:
+                    self.assertEqual(type(refl_2nd).__name__, 'ndarray')
+                    self.assertEqual(len(refl_2nd), self.asd_file.metadata.channels)
+
+    def test_007_reflectance3rdDeriv(self):
+        for file_path in all_asd_data_files:
+            with self.subTest(file_path):
+                self.asd_file.read(file_path)
+                refl_3rd = self.asd_file.reflectance3rdDeriv
+                if refl_3rd is not None:
+                    self.assertEqual(type(refl_3rd).__name__, 'ndarray')
+                    self.assertEqual(len(refl_3rd), self.asd_file.metadata.channels)
+
+    def test_008_log1R(self):
+        for file_path in all_asd_data_files:
+            with self.subTest(file_path):
+                self.asd_file.read(file_path)
+                log1r = self.asd_file.log1R
+                if log1r is not None:
+                    self.assertEqual(type(log1r).__name__, 'ndarray')
+                    self.assertEqual(len(log1r), self.asd_file.metadata.channels)
+
+    def test_009_log1RNoDeriv(self):
+        for file_path in all_asd_data_files:
+            with self.subTest(file_path):
+                self.asd_file.read(file_path)
+                log1r_no_deriv = self.asd_file.log1RNoDeriv
+                if log1r_no_deriv is not None:
+                    self.assertEqual(type(log1r_no_deriv).__name__, 'ndarray')
+
+    def test_010_log1R1stDeriv(self):
+        for file_path in all_asd_data_files:
+            with self.subTest(file_path):
+                self.asd_file.read(file_path)
+                log1r_1st = self.asd_file.log1R1stDeriv
+                if log1r_1st is not None:
+                    self.assertEqual(type(log1r_1st).__name__, 'ndarray')
+                    self.assertEqual(len(log1r_1st), self.asd_file.metadata.channels)
+
+    def test_011_log1R2ndDeriv(self):
+        for file_path in all_asd_data_files:
+            with self.subTest(file_path):
+                self.asd_file.read(file_path)
+                log1r_2nd = self.asd_file.log1R2ndDeriv
+                if log1r_2nd is not None:
+                    self.assertEqual(type(log1r_2nd).__name__, 'ndarray')
+                    self.assertEqual(len(log1r_2nd), self.asd_file.metadata.channels)
+
+    def test_012_absoluteReflectance(self):
+        for file_path in all_asd_data_files:
+            with self.subTest(file_path):
+                self.asd_file.read(file_path)
+                if self.asd_file.calibrationSeriesABS is not None and self.asd_file.reflectance is not None:
+                    abs_refl = self.asd_file.absoluteReflectance
+                    if abs_refl is not None:
+                        self.assertEqual(type(abs_refl).__name__, 'ndarray')
+                        self.assertEqual(len(abs_refl), self.asd_file.metadata.channels)
 
 
 if __name__ == '__main__':

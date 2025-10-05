@@ -172,7 +172,6 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
-        cache: 'pip'
 
     - name: Wait for PyPI to update (120 seconds)
       run: sleep 120

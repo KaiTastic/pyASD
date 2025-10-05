@@ -13,6 +13,60 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [1.2.2] - 2025-10-05
+
+### Added
+- 📋 **Codecov Configuration** - Added `.codecov.yml` for comprehensive code coverage tracking
+  - Multi-platform coverage flags (Ubuntu, Windows, macOS)
+  - Per-Python-version coverage tracking (3.8-3.12)
+  - Automatic coverage status checks on PRs
+  - Detailed coverage reporting with customizable thresholds
+- ✅ **Enhanced Test Suite** - Significantly expanded test coverage
+  - Added `test_file_attributes.py` with 12 comprehensive test cases for FileAttributes class
+  - Expanded `test_asd_file_reader.py` with new property tests and validation tests
+  - Added tests for spectral data parsing, constituent types, BSTR, and audit events
+  - Improved test coverage for file version validation, GPS parsing, and datetime handling
+- 📊 **Coverage Reporting** - Added `coverage.json` for detailed coverage metrics
+  - Per-file coverage statistics
+  - Function-level coverage tracking
+  - Class-level coverage analysis
+
+### Changed
+- 🏗️ **Improved Code Structure** - Enhanced ASDFile class inheritance
+  - `ASDFile` now properly inherits from `FileAttributes` class
+  - Better integration of file handling capabilities
+  - Improved logger initialization with proper setup in module scope
+- 🔧 **Optimized CI/CD Workflows** - Performance improvements for GitHub Actions
+  - Removed redundant pip caching from PyPI verification steps
+  - Streamlined publish workflows for faster deployments
+- 📚 **Updated Documentation** - Improved README formatting
+  - Fixed test workflow badge to reference correct workflow file
+  - Cleaned up citation section for better readability
+  - Removed verbose contribution and community sections for conciseness
+
+### Fixed
+- 🐛 **Fixed FileAttributes Methods** - Corrected attribute naming inconsistencies
+  - Fixed `set_file_name()` method to use `self.filename` instead of `self.file_name`
+  - Fixed `set_file_path()` method to use `self.filepath` instead of `self.file_path`
+  - Improved consistency across FileAttributes class methods
+- 🔧 **Enhanced Test Robustness** - Improved test initialization and execution
+  - Fixed ASDFile test initialization to work without parent class conflicts
+  - Added proper subTest contexts for all file iteration tests
+  - Improved error handling in test cases
+
+### Removed
+- ❌ **CITATION.cff** - Temporarily removed to streamline package metadata
+  - Citation information now maintained in README only
+  - Reduces maintenance overhead for version updates
+  - GitHub citation feature still available via repository metadata
+
+### Technical Improvements
+- Better test organization with comprehensive property testing
+- Improved code coverage from ~61% to higher levels across core modules
+- Enhanced file attribute handling with proper inheritance chain
+- More reliable CI/CD pipeline with optimized caching strategy
+- Better separation of concerns between file I/O and ASD parsing logic
+
 ## [1.2.1] - 2025-10-05
 
 ### Added

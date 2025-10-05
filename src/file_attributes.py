@@ -78,12 +78,12 @@ class FileAttributes(object):
     #         file.write(filepath)
 
     def set_file_name(self, new_name):
-        self.file_name = new_name
-        self.file_path = os.path.join(os.path.dirname(self.file_path), new_name)
-    
+        self.filename = new_name
+        self.filepath = os.path.join(os.path.dirname(self.filepath), new_name)
+
     def set_file_path(self, new_path):
-        self.file_path = new_path
-        self.file_name = os.path.basename(new_path)
+        self.filepath = new_path
+        self.filename = os.path.basename(new_path)
 
     def __str__(self):
         return f"File Name: \t\t{self.filename}\n" \

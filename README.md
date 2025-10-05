@@ -3,7 +3,7 @@
 [![PyPI version](https://img.shields.io/pypi/v/pyASDReader?style=flat-square)](https://pypi.org/project/pyASDReader/)
 [![Python versions](https://img.shields.io/pypi/pyversions/pyASDReader?style=flat-square)](https://pypi.org/project/pyASDReader/)
 [![License](https://img.shields.io/github/license/KaiTastic/pyASDReader?style=flat-square)](https://github.com/KaiTastic/pyASDReader/blob/main/LICENSE)
-[![Tests](https://img.shields.io/github/actions/workflow/status/KaiTastic/pyASDReader/test.yml?branch=main&label=tests&style=flat-square)](https://github.com/KaiTastic/pyASDReader/actions)
+[![Tests](https://img.shields.io/github/actions/workflow/status/KaiTastic/pyASDReader/python-package.yml?branch=main&label=tests&style=flat-square)](https://github.com/KaiTastic/pyASDReader/actions)
 [![Coverage](https://img.shields.io/codecov/c/github/KaiTastic/pyASDReader?style=flat-square)](https://codecov.io/gh/KaiTastic/pyASDReader)
 
 pyASDReader is a robust Python library designed to read and parse all versions (v1-v8) of ASD (Analytical Spectral Devices) binary spectral files. It provides seamless access to spectral data, metadata, and calibration information from various ASD instruments including FieldSpec, LabSpec, TerraSpec, and more.
@@ -305,67 +305,9 @@ Comprehensive export capabilities beyond the standard ASCII format:
 - Integration with popular spectral analysis libraries
 
 
-
-## Contributing
-
-### Development Setup
-
-1. **Fork and Clone**:
-   ```bash
-   git clone https://github.com/yourusername/pyASDReader.git
-   cd pyASDReader
-   ```
-
-2. **Create Development Environment**:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   pip install -e ".[dev]"
-   ```
-
-3. **Run Tests**:
-   ```bash
-   pytest tests/
-   python -m pytest --cov=src --cov-report=html
-   ```
-
-### Contribution Guidelines
-
-- **Bug Reports**: Use GitHub Issues with detailed reproduction steps
-- **Feature Requests**: Open an issue to discuss before implementing
-- **Code Style**: Follow PEP 8 and use provided pre-commit hooks
-- **Testing**: Add tests for new features and ensure all tests pass
-- **Documentation**: Update README and docstrings for any API changes
-
-### Development Workflow
-
-1. Create a feature branch: `git checkout -b feature/amazing-feature`
-2. Make your changes with appropriate tests
-3. Run the test suite: `pytest`
-4. Commit your changes: `git commit -m 'Add amazing feature'`
-5. Push to your fork: `git push origin feature/amazing-feature`
-6. Submit a Pull Request
-
-## � Support & Community
-
-### Getting Help
-
-- 📋 **GitHub Issues**: [Report bugs or request features](https://github.com/KaiTastic/pyASDReader/issues)
-- 📧 **Email**: `caokai_cgs@163.com` for direct support
-- 🔒 **Security**: Report vulnerabilities via the [Security Policy](SECURITY.md)
-
-### Community Guidelines
-
-- Be respectful and inclusive
-- Help others learn and grow
-- Share knowledge and experiences
-- Provide constructive feedback
-
 ## Citation
 
-If you use pyASDReader in your research, please cite it using the information from t he [CITATION.cff](CITATION.cff) file.
-
-GitHub provides a "Cite this repository" button in the sidebar that automatically generates citations in multiple formats.
+If you use pyASDReader in your research, please cite it using the following information:
 
 **BibTeX format**:
 ```bibtex
@@ -374,16 +316,16 @@ GitHub provides a "Cite this repository" button in the sidebar that automaticall
   title = {pyASDReader: A Python Library for ASD Spectral File Reading},
   year = {2025},
   url = {https://github.com/KaiTastic/pyASDReader},
-  version = {see CITATION.cff for latest version}
+  version = {1.2.1}
 }
 ```
 
 **Plain text citation**:
-> Cao, Kai. (2025). pyASDReader: A Python Library for ASD Spectral File Reading. Available at: https://github.com/KaiTastic/pyASDReader
+```
+Cao, Kai. (2025). pyASDReader: A Python Library for ASD Spectral File Reading. Available at: https://github.com/KaiTastic/pyASDReader
+```
 
-For the most up-to-date version number and citation details, please refer to the [CITATION.cff](CITATION.cff) file or use GitHub's citation feature.
-
-## 📖 References
+## References
 
 ### Official Documentation
 - [ASD Inc. (2017). ASD File Format: Version 8 (Revision): 1-10](https://www.malvernpanalytical.com/en/learn/knowledge-center/user-manuals/asd-file-format-v8)

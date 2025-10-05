@@ -27,9 +27,11 @@ from .logger_setup import setup_logging
 from .file_attributes import FileAttributes
 
 # Initialize module-level logger
+log_file = f"asd_reader_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+setup_logging(log_file, logging.INFO)
 logger = logging.getLogger(__name__)
 
-class ASDFile(object):
+class ASDFile(FileAttributes):
 
     DEFAULT_DERIVATIVE_GAP = 5
 
@@ -39,6 +41,9 @@ class ASDFile(object):
         Args:
             filepath: Optional path to ASD file. If provided, file will be read automatically.
         """
+        if filepath is not None:
+            super().__init__(filepath)  # Initialize parent class
+
         self.asdFileVersion = 0
         self.metadata = None
         self.spectrumData = None
