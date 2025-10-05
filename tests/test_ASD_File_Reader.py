@@ -8,9 +8,9 @@ import os
 import unittest
 import struct
 from datetime import datetime, timedelta
-from src.asd_file_reader import ASDFile
+from pyASD import ASDFile
 # Constants
-from src.constant import *
+from pyASD.constant import *
 
 
 
@@ -201,12 +201,7 @@ The aspects to be tested are:
     - Test with edge cases, such as packing and unpacking with special characters or null bytes.
 """
 
-<<<<<<< HEAD
 class TestASDFileParseMetadata(unittest.TestCase):
-=======
-import unittest
-from pyASD import ASDFile
->>>>>>> dev
 
     def test_001_parse_metadata(self):
         # Check if the ASDFile object is initialized correctly
@@ -524,16 +519,9 @@ class TestASDFileParseSpectrumData(unittest.TestCase):
 class TestASDFileParseReferenceFileHeader(unittest.TestCase):
 
     def setUp(self):
-<<<<<<< HEAD
         # Check if the ASDFile object is initialized correctly
         self.asd_file=ASDFile()
         self.assertIsNotNone(self.asd_file)
-=======
-        # Test file in the sample_data directory
-        self.test_file_path = './tests/sample_data/v7sample_field_spectroscopy/44231B009-1-FW3R00000.asd'
-        # Create ASDFile instance without auto-loading
-        self.asd_file = ASDFile()
->>>>>>> dev
 
     def tearDown(self):
         # Clean up the ASDFile object
@@ -1309,25 +1297,6 @@ class TestASDFileBenchmark(unittest.TestCase):
         self.assertIsNotNone(self.asd_file.metadata.calcParabolicCorrection)
         self.assertEqual(offset, 484)
 
-<<<<<<< HEAD
-
-=======
-    def test_read_file_metadata(self):
-        # Assuming you have a valid test file
-        self.asd_file.read(self.test_file_path)
-        self.assertIsNotNone(self.asd_file.metadata)
-        print(self.asd_file.metadata)
-        # Don't access private attributes in tests
-
-    def test_bom(self):
-        # the BOM only exists in the last 3 bytes of the file from the spectroscopy data
-        self.asd_file.read(self.test_file_path)
-        # Access private attribute using name mangling (for testing only)
-        # Better approach: test public behavior instead
-        # self.assertEqual(self.asd_file._ASDFile__bom, b'\xFF\xFE\xFD')
-        # Instead, test that the file was read successfully
-        self.assertIsNotNone(self.asd_file.metadata)
->>>>>>> dev
 
 if __name__ == '__main__':
     unittest.main(exit=False)

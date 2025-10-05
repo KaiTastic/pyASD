@@ -13,8 +13,6 @@ Copyright Statement:   Full Copyright
 @Desc    :   According to "ASD File Format version 8: Revision B"
 '''
 
-from __future__ import annotations  # Python 3.8 compatibility for type hints
-
 import os
 import struct
 import re
@@ -99,7 +97,7 @@ class ASDFile(object):
                     offset = self.__parse_spectrumData(offset)
                 except Exception as e:
                     logger.exception(f"Error in parsing the metadata and spectrum data.\nError: {e}")
-        if asdFileVersion.value >= 2:
+        if self.asdFileVersion.value >= 2:
             try:
                 offset = self.__parse_referenceFileHeader(offset)
             except Exception as e:
@@ -109,18 +107,18 @@ class ASDFile(object):
                     offset = self.__parse_referenceData(offset)
                 except Exception as e:
                     logger.exception(f"Error in parsing the reference data.\nError: {e}")
-        if asdFileVersion.value >= 6:
+        if self.asdFileVersion.value >= 6:
             try:
                 # Read Classifier Data
                 offset = self.__parse_classifierData(offset)
             except Exception as e:
                 logger.exception(f"Error in parsing the classifier data.\nError: {e}")
-            else:    
+            else:
                 try:
                     offset = self.__parse_dependentVariables(offset)
                 except Exception as e:
                     logger.exception(f"Error in parsing the depndant variables.\nError: {e}")
-        if asdFileVersion.value >= 7:
+        if self.asdFileVersion.value >= 7:
             try:
                 # Read Calibration Header
                 offset = self.__parse_calibrationHeader(offset)
@@ -143,7 +141,7 @@ class ASDFile(object):
                     #     logger.info(f"Calibration data is not available.")
                 except Exception as e:
                     logger.exception(f"Error in parsing the calibration data.\nError: {e}")       
-        if asdFileVersion.value >= 8:
+        if self.asdFileVersion.value >= 8:
             try:
                 # Read Audit Log
                 offset = self.__parse_auditLog(offset)
@@ -936,8 +934,6 @@ class ASDFile(object):
 # Custom...
 
 
-<<<<<<< HEAD:src/asd_file_reader.py
-=======
 def setup_logging(log_file):
     # To generate a log file name that includes the date
     logger.info(f"Log file Path: {log_file}")
@@ -953,7 +949,6 @@ def setup_logging(log_file):
             logging.FileHandler(log_file, encoding='utf-8')  # Log to file
         ]
     )
->>>>>>> dev:src/ASD_File_Reader.py
 
 
 if __name__ == "__main__":

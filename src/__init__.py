@@ -6,7 +6,7 @@ from various ASD spectroradiometer models.
 """
 
 from ._version import __version__
-from .ASD_File_Reader import ASDFile
+from .asd_file_reader import ASDFile
 from .constant import (
     FileVersion_e,
     InstrumentType_e,
