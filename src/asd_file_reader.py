@@ -63,6 +63,11 @@ class ASDFile(object):
     def read(self: object, filePath: str) -> bool:
         readSuccess = False
 
+        # Check if filePath is valid
+        if filePath is None or not isinstance(filePath, (str, bytes, os.PathLike)):
+            logger.error(f"Invalid file path: {filePath}")
+            return False
+
         # Check if file exists
         if not (os.path.exists(filePath) and os.path.isfile(filePath)):
             logger.error(f"File does not exist or is not a file: {filePath}")
