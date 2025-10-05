@@ -3,14 +3,17 @@ requires = ["setuptools>=64", "setuptools_scm>=8", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pyASD"
+name = "pyASDReader"
 dynamic = ["version"]
 description = "A Python library for reading and parsing all versions of ASD binary spectral files"
-readme = "README.md"
+readme = {file = "README.md", content-type = "text/markdown"}
 requires-python = ">=3.8"
 license = {file = "LICENSE"}
 keywords = ["ASD", "spectral files", "spectroradiometer", "remote sensing"]
 authors = [
+    {name = "Kai Cao", email = "caokai_cgs@163.com"}
+]
+maintainers = [
     {name = "Kai Cao", email = "caokai_cgs@163.com"}
 ]
 classifiers = [
@@ -32,28 +35,56 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    # Testing
     "pytest>=6.0.0",
     "pytest-cov>=2.10.0",
     "pytest-html>=3.0.0",
-    "flake8>=3.8.0",
     "coverage>=5.0.0",
+    # Code quality
+    "flake8>=3.8.0",
+    "black>=21.0.0",
+    "isort>=5.0.0",
+    # Build tools
+    "build>=0.7.0",
+    "twine>=3.0.0",
+    # Development utilities
+    "pre-commit>=2.15.0",
+    "tox>=3.20.0",
 ]
 docs = [
     "sphinx>=4.0.0",
     "sphinx-rtd-theme>=1.0.0",
 ]
+all = [
+    # Include all optional dependencies
+    "pytest>=6.0.0",
+    "pytest-cov>=2.10.0",
+    "pytest-html>=3.0.0",
+    "coverage>=5.0.0",
+    "flake8>=3.8.0",
+    "black>=21.0.0",
+    "isort>=5.0.0",
+    "build>=0.7.0",
+    "twine>=3.0.0",
+    "pre-commit>=2.15.0",
+    "tox>=3.20.0",
+    "sphinx>=4.0.0",
+    "sphinx-rtd-theme>=1.0.0",
+]
 
 [project.urls]
-Homepage = "https://github.com/KaiTastic/pyASD"
-Documentation = "https://github.com/KaiTastic/pyASD#readme"
-Repository = "https://github.com/KaiTastic/pyASD"
-"Bug Reports" = "https://github.com/KaiTastic/pyASD/issues"
-Changelog = "https://github.com/KaiTastic/pyASD/blob/master/CHANGELOG.md"
-PyPI = "https://pypi.org/project/pyASD/"
+Homepage = "https://github.com/KaiTastic/pyASDReader"
+Documentation = "https://github.com/KaiTastic/pyASDReader#readme"
+Repository = "https://github.com/KaiTastic/pyASDReader"
+Source = "https://github.com/KaiTastic/pyASDReader"
+Issues = "https://github.com/KaiTastic/pyASDReader/issues"
+"Bug Reports" = "https://github.com/KaiTastic/pyASDReader/issues"
+Changelog = "https://github.com/KaiTastic/pyASDReader/blob/main/CHANGELOG.md"
+PyPI = "https://pypi.org/project/pyASDReader/"
 
 [tool.setuptools]
-packages = ["pyASD"]
-package-dir = {"pyASD" = "src"}
+packages = ["pyASDReader"]
+package-dir = {"pyASDReader" = "src"}
 
 [tool.setuptools.package-data]
 "*" = ["*.mat"]
@@ -65,13 +96,13 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = [
     "--verbose",
-    "--cov=pyASD",
+    "--cov=pyASDReader",
     "--cov-report=html",
     "--cov-report=term-missing",
 ]
 
 [tool.coverage.run]
-source = ["pyASD"]
+source = ["pyASDReader"]
 omit = ["*/tests/*", "*/__pycache__/*"]
 
 [tool.coverage.report]
@@ -86,7 +117,7 @@ exclude_lines = [
 [tool.setuptools_scm]
 version_scheme = "guess-next-dev"
 local_scheme = "no-local-version"
-fallback_version = "1.0.0"
+fallback_version = "1.1.0"
 
 [tool.black]
 line-length = 120
@@ -109,5 +140,5 @@ extend-exclude = '''
 profile = "black"
 line_length = 120
 skip_gitignore = true
-known_first_party = ["pyASD"]
+known_first_party = ["pyASDReader"]
 sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]

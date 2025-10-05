@@ -4,6 +4,7 @@
 include README.md
 include LICENSE
 include CHANGELOG.md
+include SECURITY.md
 
 # Configuration files
 include pyproject.toml

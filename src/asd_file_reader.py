@@ -938,32 +938,3 @@ class ASDFile(object):
 # Convex Hull
 # Custom...
 
-
-def setup_logging(log_file):
-    # To generate a log file name that includes the date
-    logger.info(f"Log file Path: {log_file}")
-    # Set up logging format and level
-    logging.basicConfig(
-        level=logging.INFO,
-        # Log format
-        # format='%(asctime)s - %(levelname)s - %(message)s',
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s - Line: %(lineno)d',
-        # format='%(levelname)s - %(message)s',
-        handlers=[
-            logging.StreamHandler(),  # Log to console
-            logging.FileHandler(log_file, encoding='utf-8')  # Log to file
-        ]
-    )
-
-
-if __name__ == "__main__":
-    # Set up a loccal logger for the module
-    datetime_str = datetime.now().strftime("%Y-%m-%d")
-    logFile=os.path.join(os.path.dirname(__file__), f'ASD_File_Reader_{datetime_str}.log')
-    setup_logging(logFile) 
-    logger = logging.getLogger(__name__)
-
-else:
-    # acquire the logger from the parent module
-    logger = logging.getLogger("Global Logger")
-

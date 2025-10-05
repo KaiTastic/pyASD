@@ -1,5 +1,5 @@
 """
-pyASD - A Python library for reading and parsing ASD binary spectral files
+pyASDReader - A Python library for reading and parsing ASD binary spectral files
 
 This package provides tools for reading all versions of ASD spectral files
 from various ASD spectroradiometer models.

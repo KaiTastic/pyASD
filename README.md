@@ -1,109 +1,414 @@
-### pyASD - Python ASD Spectral File Reader
+### pyASDReader - Python ASD Spectral File Reader
 
-[![PyPI version](https://img.shields.io/pypi/v/pyASD.svg)](https://pypi.org/project/pyASD/)
-[![Python versions](https://img.shields.io/pypi/pyversions/pyASD.svg)](https://pypi.org/project/pyASD/)
-[![License](https://img.shields.io/github/license/KaiTastic/pyASD.svg)](https://github.com/KaiTastic/pyASD/blob/main/LICENSE)
+[![PyPI version](https://img.shields.io/pypi/v/pyASDReader?style=flat-square)](https://pypi.org/project/pyASDReader/)
+[![Python versions](https://img.shields.io/pypi/pyversions/pyASDReader?style=flat-square)](https://pypi.org/project/pyASDReader/)
+[![License](https://img.shields.io/github/license/KaiTastic/pyASDReader?style=flat-square)](https://github.com/KaiTastic/pyASDReader/blob/main/LICENSE)
+[![Tests](https://img.shields.io/github/actions/workflow/status/KaiTastic/pyASDReader/test.yml?branch=main&label=tests&style=flat-square)](https://github.com/KaiTastic/pyASDReader/actions)
+[![Coverage](https://img.shields.io/codecov/c/github/KaiTastic/pyASDReader?style=flat-square)](https://codecov.io/gh/KaiTastic/pyASDReader)
 
-## 📦 Installation
+pyASDReader is a robust Python library designed to read and parse all versions (v1-v8) of ASD (Analytical Spectral Devices) binary spectral files. It provides seamless access to spectral data, metadata, and calibration information from various ASD instruments including FieldSpec, LabSpec, TerraSpec, and more.
+
+---
+
+## 🚀 Key Features
+
+- **Universal Compatibility**: Supports all ASD file versions (v1-v8) and instruments
+  - FieldSpec series (4 Hi-Res NG, 4 Hi-Res, 4 Standard-Res, 4 Wide-Res)
+  - LabSpec series (4 Bench, 4 Hi-Res, 4 Standard-Res)
+  - TerraSpec series (4 Hi-Res, 4 Standard-Res)
+  - HandHeld series (2 Pro, 2), AgriSpec, and more
+  
+- **Comprehensive Data Access**: Extract all spectral information
+  - Spectral data (reflectance, radiance, irradiance)
+  - Wavelength arrays and derivative calculations
+  - Complete metadata and instrument parameters
+  - Calibration data and reference measurements
+  
+- **Advanced Processing**: Built-in spectral analysis tools
+  - First and second derivative calculations
+  - Log(1/R) transformations
+  - Type-safe enum constants for file attributes
+  - Robust error handling and validation
+
+## Requirements
+
+- Python >=3.8
+- numpy >=1.20.0
+
+## Installation
+
+### Stable Release (Recommended)
 
 ```bash
-pip install pyASD
+pip install pyASDReader
 ```
 
-## 🚀 Quick Start
+### Development Installation
+
+For contributors and advanced users:
+
+```bash
+# Clone the repository
+git clone https://github.com/KaiTastic/pyASDReader.git
+cd pyASDReader
+
+# Install in editable mode with development dependencies
+pip install -e ".[dev]"
+
+# Install with all dependencies (dev + docs + testing)
+pip install -e ".[all]"
+```
+
+## Quick Start
 
 ```python
-from src import ASDFile
+from pyASDReader import ASDFile
 
-# Option 1: Auto-load file on initialization
-asd = ASDFile("path/to/file.asd")
+# Method 1: Load file during initialization
+asd_file = ASDFile("path/to/your/spectrum.asd")
 
-# Option 2: Create instance first, then load file
-asd = ASDFile()
-asd.read("path/to/file.asd")
+# Method 2: Create instance first, then load
+asd_file = ASDFile()
+asd_file.read("path/to/your/spectrum.asd")
 
-# Access data
-wavelengths = asd.wavelengths  # Note: plural form
-reflectance = asd.reflectance
-metadata = asd.metadata
+# Access basic data
+wavelengths = asd_file.wavelengths    # Wavelength array
+reflectance = asd_file.reflectance    # Reflectance values
+metadata = asd_file.metadata          # File metadata
 ```
 
-##### To cite this repository:
+## Usage Examples
 
-Cao, Kai. (2025). "pyASD - Python ASD Spectral File Reader". https://github.com/KaiTastic/pyASD
+### Basic Spectral Data Access
 
-### Repository Introduction
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+from pyASDReader import ASDFile
 
-A Python library for reading and parsing all versions of *.asd binary spectral files.
+# Load ASD file
+asd = ASDFile("sample_spectrum.asd")
 
-##### About the *.asd file
+# Basic information
+print(f"File version: {asd.asdFileVersion}")
+print(f"Instrument: {asd.metadata.instrumentModel}")
+print(f"Number of channels: {len(asd.wavelengths)}")
+print(f"Spectral range: {asd.wavelengths[0]:.1f} - {asd.wavelengths[-1]:.1f} nm")
 
- The *.asd file supports for:
+# Plot spectrum
+plt.figure(figsize=(10, 6))
+plt.plot(asd.wavelengths, asd.reflectance)
+plt.xlabel('Wavelength (nm)')
+plt.ylabel('Reflectance')
+plt.title('ASD Spectrum')
+plt.grid(True)
+plt.show()
+```
 
-> ASD AgriSpec, ASD FieldSpec range, ASD FieldSpec 4 Hi-Res NG, ASD FieldSpec 4 Hi-Res, ASD FieldSpec 4 Standard-Res, ASD FieldSpec 4 Wide-Res, ASD HandHeld 2 Pro, ASD HandHeld 2, ASD LabSpec range, ASD LabSpec 4 Bench, ASD LabSpec 4 Hi-Res, ASD LabSpec 4 Standard-Res, ASD TerraSpec range, ASD TerraSpec 4 Hi-Res, ASD TerraSpec 4 Standard-Res.
-> <a href="https://www.malvernpanalytical.com/en/learn/knowledge-center/user-manuals/asd-file-format-v8" target="_blank" rel="noopener noreferrer">ASD Inc., (2017). ASD File Format: Version 8 (Revision): 1-10.</a>
+### Advanced Spectral Analysis
 
-###   Description for Version 1.0.0 (ASD_File_Reader.py)
+```python
+# Access different spectral measurements
+reflectance = asd.reflectance                 # Raw reflectance
+abs_reflectance = asd.absoluteReflectance     # Absolute reflectance
+radiance = asd.radiance                       # Radiance data
+irradiance = asd.irradiance                   # Irradiance data
 
-| ASD File Structure             | class ASDFile()                                      |
-| ------------------------------ | ---------------------------------------------------- |
-| Spectrum File Header           | self.asdFileVersion; self.metadata                   |
-| Spectrum Data                  | self.spectrumData                                    |
-| Reference File Header          | self.referenceFileHeader                             |
-| Reference Data                 | self.referenceData                                   |
-| Classifier Data                | self.classifierData                                  |
-| Dependent Variables            | self.dependants                                      |
-| Calibration Header             | self.calibrationHeader                               |
-| Absolute/Base Calibration Data | self.calibrationSeriesABS; self.calibrationSeriesBSE |
-| Lamp Calibration Data          | self.calibrationSeriesLMP                            |
-| Fiber Optic Data               | self.calibrationSeriesFO                             |
-| Audit Log                      | self.auditLog                                        |
-| Signature                      | self.signature                                       |
+# Derivative calculations
+refl_1st_deriv = asd.reflectance1stDeriv      # First derivative
+refl_2nd_deriv = asd.reflectance2ndDeriv      # Second derivative
 
-#### Benchmark test
+# Log(1/R) transformations
+log1r = asd.log1R                             # Log(1/R)
+log1r_1st_deriv = asd.log1R1stDeriv          # Log(1/R) first derivative
+log1r_2nd_deriv = asd.log1R2ndDeriv          # Log(1/R) second derivative
+```
 
-As shown in the folder `.\tests\`, besides the conventional tests for packing and unpacking of the byte stream, the unit test also conducted the benchmark test for the calculation of accurate precision  results with ASD Inc. official software **ViewSpecPro 6.2.0**, in the following aspects:
+### Error Handling and Validation
 
-##### Tested
+```python
+from pyASDReader import ASDFile
+import os
 
-- @dn
-- @reflectance, reflectanceNoDeriv, reflectance1stDeriv, reflectance2ndDeriv
-- @absoluteReflectance
-- @log1R, log1RNoDeriv, log1R1stDeriv, log1R2ndDeriv
+def safe_read_asd(file_path):
+    """Safely read ASD file with error handling."""
+    try:
+        # Check if file exists
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"ASD file not found: {file_path}")
+        
+        # Load the file
+        asd = ASDFile(file_path)
+        
+        # Validate data
+        if asd.wavelengths is None or len(asd.wavelengths) == 0:
+            raise ValueError("Invalid or empty wavelength data")
+        
+        if asd.reflectance is None or len(asd.reflectance) == 0:
+            raise ValueError("Invalid or empty reflectance data")
+        
+        print(f"✓ Successfully loaded: {os.path.basename(file_path)}")
+        print(f"  Channels: {len(asd.wavelengths)}")
+        print(f"  Range: {asd.wavelengths[0]:.1f}-{asd.wavelengths[-1]:.1f} nm")
+        
+        return asd
+        
+    except Exception as e:
+        print(f"✗ Error loading {file_path}: {str(e)}")
+        return None
 
-##### **Not yet finished (to be completed):**
+# Usage
+asd_file = safe_read_asd("spectrum.asd")
+if asd_file is not None:
+    # Process the file
+    pass
+```
 
-- @radiance
-- @irradiance
-- @parabolic_correction
+### Batch Processing
 
-### Upcoming Features:
+```python
+import glob
+from pathlib import Path
+
+def process_asd_directory(directory_path, output_format='csv'):
+    """Process all ASD files in a directory."""
+    asd_files = glob.glob(os.path.join(directory_path, "*.asd"))
+    
+    print(f"Found {len(asd_files)} ASD files")
+    
+    for file_path in asd_files:
+        try:
+            asd = ASDFile(file_path)
+            
+            # Extract filename without extension
+            base_name = Path(file_path).stem
+            
+            if output_format == 'csv':
+                # Save as CSV
+                output_path = f"{base_name}_spectrum.csv"
+                data = np.column_stack([asd.wavelengths, asd.reflectance])
+                np.savetxt(output_path, data, delimiter=',', 
+                          header='Wavelength(nm),Reflectance', comments='')
+                print(f"✓ Saved: {output_path}")
+                
+        except Exception as e:
+            print(f"✗ Error processing {file_path}: {str(e)}")
+
+# Usage
+process_asd_directory("./asd_data/", output_format='csv')
+```
+
+## API Reference
+
+### Core Classes
+
+#### `ASDFile`
+
+The main class for reading and parsing ASD files.
+
+**Constructor:**
+```python
+ASDFile(file_path: str = None)
+```
+
+**Key Properties:**
+| Property | Type | Description |
+|----------|------|-------------|
+| `wavelengths` | `numpy.ndarray` | Wavelength array (nm) |
+| `reflectance` | `numpy.ndarray` | Reflectance values |
+| `absoluteReflectance` | `numpy.ndarray` | Absolute reflectance |
+| `radiance` | `numpy.ndarray` | Radiance data |
+| `irradiance` | `numpy.ndarray` | Irradiance data |
+| `reflectance1stDeriv` | `numpy.ndarray` | First derivative of reflectance |
+| `reflectance2ndDeriv` | `numpy.ndarray` | Second derivative of reflectance |
+| `log1R` | `numpy.ndarray` | Log(1/R) transformation |
+| `log1R1stDeriv` | `numpy.ndarray` | First derivative of Log(1/R) |
+| `log1R2ndDeriv` | `numpy.ndarray` | Second derivative of Log(1/R) |
+| `metadata` | `object` | File metadata and instrument info |
+| `asdFileVersion` | `int` | ASD file format version |
+
+**Methods:**
+```python
+read(file_path: str) -> None
+    """Load and parse an ASD file."""
+```
+
+## Technical Documentation
+
+### ASD File Format Support
+
+pyASDReader supports all ASD file format versions and instrument models:
+
+#### Supported Instruments
+
+| **FieldSpec Series** | **LabSpec Series** | **TerraSpec Series** |
+|---------------------|-------------------|---------------------|
+| FieldSpec 4 Hi-Res NG | LabSpec 4 Bench | TerraSpec 4 Hi-Res |
+| FieldSpec 4 Hi-Res | LabSpec 4 Hi-Res | TerraSpec 4 Standard-Res |
+| FieldSpec 4 Standard-Res | LabSpec 4 Standard-Res | |
+| FieldSpec 4 Wide-Res | LabSpec range | |
+
+| **HandHeld Series** | **Other Models** |
+|-------------------|------------------|
+| HandHeld 2 Pro | AgriSpec |
+| HandHeld 2 | |
+
+#### File Structure Mapping
+
+| **ASD File Component** | **pyASDReader Property** |
+|----------------------|-------------------------|
+| Spectrum File Header | `asdFileVersion`, `metadata` |
+| Spectrum Data | `spectrumData` |
+| Reference File Header | `referenceFileHeader` |
+| Reference Data | `referenceData` |
+| Classifier Data | `classifierData` |
+| Dependent Variables | `dependants` |
+| Calibration Header | `calibrationHeader` |
+| Absolute/Base Calibration | `calibrationSeriesABS`, `calibrationSeriesBSE` |
+| Lamp Calibration Data | `calibrationSeriesLMP` |
+| Fiber Optic Data | `calibrationSeriesFO` |
+| Audit Log | `auditLog` |
+| Digital Signature | `signature` |
+
+### Validation and Testing
+
+pyASDReader has been extensively tested against **ASD ViewSpecPro 6.2.0** to ensure accuracy:
+
+#### ✅ **Validated Features**
+- Digital Number (DN) values
+- Reflectance calculations (raw, 1st derivative, 2nd derivative)
+- Absolute reflectance computations
+- Log(1/R) transformations (raw, 1st derivative, 2nd derivative)
+- Wavelength accuracy and calibration
+
+#### 🔄 **In Development**
+- Radiance calculations
+- Irradiance processing  
+- Parabolic jump correction algorithms
+
+### Upcoming Features
 
 #### Spectral Discontinuities Correction
 
-Spectral discontinuities, or "step/jump", are the radiation steps in the spectral curve at the junction of the instrument, which will affect the quality of the spectral data. This correction module will provide the temperature-based **Hueni method** ([Hueni and Bialek, 2017]()) and the parabola-based **ASD Parabolic method** ([ASD Inc., 2015]()) to correct the jumps.
+Advanced correction algorithms for spectral jumps at detector boundaries:
 
-##### Code Description
+- **Hueni Method**: Temperature-based correction using empirical formulas
+- **ASD Parabolic Method**: Parabolic interpolation for jump correction
+- Support for both automated and manual correction parameters
 
-###### Solve for external temperature based on empirical formula
+#### Enhanced File Format Conversion
 
-By querying the `coeffs` table (`src\asd_temp_corr_coeffs.mat`), we can get the `a, b, c` values, and solve T according to the `eq. 8` in ([Hueni and Bialek, 2017]()).
+Comprehensive export capabilities beyond the standard ASCII format:
+- Multiple output formats (CSV, JSON, HDF5, NetCDF)
+- Customizable data selection and filtering
+- Batch processing with parallel execution
+- Integration with popular spectral analysis libraries
 
-#### File Format Converter:
-
-Although the ASD Inc. official software **ViewSpecPro** has already offered the function "Process --> ASCII Export", to enhance the flexibility of pyASD, the equivalent "ASCII Export" function, or a more powerful tool/module will be provided for further spectroscopy processing.
 
 
+## Contributing
 
-#### Reference
+### Development Setup
 
-<a href="https://www.malvernpanalytical.com/en/learn/knowledge-center/user-manuals/asd-file-format-v8" target="_blank" rel="noopener noreferrer">ASD Inc., (2017). ASD File Format: Version 8 (Revision): 1-10.</a>
+1. **Fork and Clone**:
+   ```bash
+   git clone https://github.com/yourusername/pyASDReader.git
+   cd pyASDReader
+   ```
 
-ASD Inc., Indico Version 7 File Format: 1-9.
+2. **Create Development Environment**:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   pip install -e ".[dev]"
+   ```
 
-ASD Inc., (2008). ViewSpec Pro User Manual: 1-24.
+3. **Run Tests**:
+   ```bash
+   pytest tests/
+   python -m pytest --cov=src --cov-report=html
+   ```
 
-ASD Inc., (2015). FieldSpec 4 User Manual, pp. 1-10.
+### Contribution Guidelines
 
-<a href="https://ieeexplore.ieee.org/document/7819458" target="_blank" rel="noopener noreferrer">Hueni, A. and A. Bialek, (2017). "Cause, Effect, and Correction of Field Spectroradiometer Interchannel Radiometric Steps." IEEE Journal of Selected Topics in Applied Earth Observations and Remote Sensing 10(4): 1542-1551</a>.
+- **Bug Reports**: Use GitHub Issues with detailed reproduction steps
+- **Feature Requests**: Open an issue to discuss before implementing
+- **Code Style**: Follow PEP 8 and use provided pre-commit hooks
+- **Testing**: Add tests for new features and ensure all tests pass
+- **Documentation**: Update README and docstrings for any API changes
+
+### Development Workflow
+
+1. Create a feature branch: `git checkout -b feature/amazing-feature`
+2. Make your changes with appropriate tests
+3. Run the test suite: `pytest`
+4. Commit your changes: `git commit -m 'Add amazing feature'`
+5. Push to your fork: `git push origin feature/amazing-feature`
+6. Submit a Pull Request
+
+## � Support & Community
+
+### Getting Help
+
+- 📋 **GitHub Issues**: [Report bugs or request features](https://github.com/KaiTastic/pyASDReader/issues)
+- 📧 **Email**: `caokai_cgs@163.com` for direct support
+- 🔒 **Security**: Report vulnerabilities via our [Security Policy](SECURITY.md)
+
+### Community Guidelines
+
+- Be respectful and inclusive
+- Help others learn and grow
+- Share knowledge and experiences
+- Provide constructive feedback
+
+## Citation
+
+If you use pyASDReader in your research, please cite:
+
+```bibtex
+@software{cao2025pyasdreader,
+  author = {Cao, Kai},
+  title = {pyASDReader: A Python Library for ASD Spectral File Reading},
+  year = {2025},
+  url = {https://github.com/KaiTastic/pyASDReader},
+  version = {1.0.0}
+}
+```
+
+**Plain text citation**:
+> Cao, Kai. (2025). pyASDReader: A Python Library for ASD Spectral File Reading. https://github.com/KaiTastic/pyASDReader
+
+## 📖 References
+
+### Official Documentation
+- [ASD Inc. (2017). ASD File Format: Version 8 (Revision): 1-10](https://www.malvernpanalytical.com/en/learn/knowledge-center/user-manuals/asd-file-format-v8)
+- ASD Inc. Indico Version 7 File Format: 1-9
+- ASD Inc. (2008). ViewSpec Pro User Manual: 1-24  
+- ASD Inc. (2015). FieldSpec 4 User Manual: 1-10
+
+### Scientific References
+- [Hueni, A. and A. Bialek (2017). "Cause, Effect, and Correction of Field Spectroradiometer Interchannel Radiometric Steps." IEEE Journal of Selected Topics in Applied Earth Observations and Remote Sensing 10(4): 1542-1551](https://ieeexplore.ieee.org/document/7819458)
+
+## License
+
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for complete details.
+
+### Built With
+
+- [NumPy](https://numpy.org/) - Numerical computing library
+- [Python](https://python.org/) - Programming language
+- [pytest](https://pytest.org/) - Testing framework
+
+---
+
+<div align="center">
+
+**[⬆ Back to Top](#pyasdreader)**
+
+Made with ❤️ for the spectroscopy community
+
+[![GitHub stars](https://img.shields.io/github/stars/KaiTastic/pyASDReader?style=social)](https://github.com/KaiTastic/pyASDReader/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/KaiTastic/pyASDReader?style=social)](https://github.com/KaiTastic/pyASDReader/network/members)
+
+</div>
 

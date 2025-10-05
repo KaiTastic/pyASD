@@ -1,4 +1,4 @@
-# Version file for pyASD
+# Version file for pyASDReader
 # This file provides access to the package version number
 # Version is automatically managed by setuptools-scm from git tags
 
@@ -9,4 +9,4 @@ except (ImportError, LookupError):
     # Fallback version when setuptools_scm is not available
     # or when not in a git repository
     # Use actual release version as fallback
-    __version__ = "1.0.0"
+    __version__ = "1.1.0"

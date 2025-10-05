@@ -8,9 +8,9 @@ import os
 import unittest
 import struct
 from datetime import datetime, timedelta
-from pyASD import ASDFile
+from pyASDReader import ASDFile
 # Constants
-from pyASD.constant import *
+from pyASDReader.constant import *
 
 
 

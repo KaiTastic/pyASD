@@ -63,7 +63,7 @@ jobs:
     # or comment out the environment section and use password instead
     # environment:
     #   name: pypi
-    #   url: https://pypi.org/project/pyASD/
+    #   url: https://pypi.org/project/pyASDReader/
 
     permissions:
       id-token: write  # Required for trusted publishing
@@ -166,7 +166,7 @@ jobs:
     - name: Install from PyPI
       run: |
         python -m pip install --upgrade pip
-        python -m pip install pyASD
+        python -m pip install pyASDReader
       continue-on-error: true
 
     - name: Retry installation if failed (PyPI might be slow)
@@ -174,13 +174,13 @@ jobs:
       run: |
         echo "First install attempt failed, waiting 60 more seconds..."
         sleep 60
-        python -m pip install pyASD
+        python -m pip install pyASDReader
 
     - name: Verify installation
       run: |
-        python -c "from pyASD import ASDFile; print('Successfully imported ASDFile')"
-        python -c "from pyASD import __version__; print(f'Package version: {__version__}')"
+        python -c "from pyASDReader import ASDFile; print('Successfully imported ASDFile')"
+        python -c "from pyASDReader import __version__; print(f'Package version: {__version__}')"
 
     - name: Verify package metadata
       run: |
-        python -c "import pkg_resources; dist = pkg_resources.get_distribution('pyASD'); print(f'📦 Package: {dist.project_name}'); print(f'📍 Location: {dist.location}'); print(f'🔖 Version: {dist.version}')"
+        python -c "import pkg_resources; dist = pkg_resources.get_distribution('pyASDReader'); print(f'📦 Package: {dist.project_name}'); print(f'📍 Location: {dist.location}'); print(f'🔖 Version: {dist.version}')"

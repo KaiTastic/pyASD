@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# pyASD PyPI Publishing Script
+# pyASDReader PyPI Publishing Script
 # Usage:
 #   bash scripts/publish.sh test    # Publish to TestPyPI
 #   bash scripts/publish.sh prod    # Publish to PyPI
@@ -43,7 +43,7 @@ fi
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$PROJECT_ROOT"
 
-print_info "Starting PyPI publishing process for pyASD..."
+print_info "Starting PyPI publishing process for pyASDReader..."
 print_info "Target: $TARGET"
 print_info "Project root: $PROJECT_ROOT"
 
@@ -128,20 +128,20 @@ if [ "$TARGET" == "test" ]; then
     python3 -m twine upload --repository testpypi dist/*
 
     print_info "Successfully published to TestPyPI!"
-    print_info "View at: https://test.pypi.org/project/pyASD/$VERSION/"
+    print_info "View at: https://test.pypi.org/project/pyASDReader/$VERSION/"
     print_info ""
     print_info "To test installation, run:"
-    print_info "  pip install --index-url https://test.pypi.org/simple/ --no-deps pyASD"
+    print_info "  pip install --index-url https://test.pypi.org/simple/ --no-deps pyASDReader"
 
 elif [ "$TARGET" == "prod" ]; then
     print_info "Step 4: Uploading to PyPI..."
     python3 -m twine upload dist/*
 
     print_info "Successfully published to PyPI!"
-    print_info "View at: https://pypi.org/project/pyASD/$VERSION/"
+    print_info "View at: https://pypi.org/project/pyASDReader/$VERSION/"
     print_info ""
     print_info "To install, run:"
-    print_info "  pip install --upgrade pyASD"
+    print_info "  pip install --upgrade pyASDReader"
     print_info ""
     print_info "Don't forget to create a git tag:"
     print_info "  git tag v$VERSION"

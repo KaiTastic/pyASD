@@ -95,7 +95,7 @@ jobs:
     - name: Install from TestPyPI
       run: |
         python -m pip install --upgrade pip
-        python -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ pyASD
+        python -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ pyASDReader
       continue-on-error: true
 
     - name: Retry installation if failed
@@ -103,13 +103,13 @@ jobs:
       run: |
         echo "First install attempt failed, waiting 30 more seconds..."
         sleep 30
-        python -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ pyASD
+        python -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ pyASDReader
 
     - name: Verify installation
       run: |
-        python -c "from pyASD import ASDFile; print('Successfully imported ASDFile')"
-        python -c "from pyASD import __version__; print(f'Package version: {__version__}')"
+        python -c "from pyASDReader import ASDFile; print('Successfully imported ASDFile')"
+        python -c "from pyASDReader import __version__; print(f'Package version: {__version__}')"
 
     - name: Show installation location
       run: |
-        python -c "import pyASD; import os; print(f'Installed at: {os.path.dirname(pyASD.__file__)}')"
+        python -c "import pyASDReader; import os; print(f'Installed at: {os.path.dirname(pyASDReader.__file__)}')"
