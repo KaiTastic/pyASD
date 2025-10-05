@@ -13,6 +13,57 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [1.2.0] - 2025-10-05
+
+### Changed
+- 🔄 **Package renamed** from `pyASD` to `pyASDReader` across all configuration files
+- 📦 Updated package configuration in pyproject.toml with improved metadata
+- 🏗️ **Major code structure refactoring** for improved readability and maintainability
+- 📚 Significantly enhanced README.md with comprehensive documentation
+- 🔧 Modernized dependency management with expanded dev tools
+- 🧪 Improved CI/CD workflows for better reliability and accuracy
+- 📝 Updated all GitHub Actions workflows to use correct branch references (main)
+- 🎯 Enhanced pre-commit configuration for better code quality
+- 🚀 Improved publish scripts with better error handling
+
+### Added
+- ✨ **CITATION.cff** - Formal citation support for academic use
+- 📚 **VERSION_MANAGEMENT.md** - Comprehensive version management documentation
+- 📝 **examples/README.md** - Detailed examples documentation
+- 📝 **examples/basic_usage.py** - Practical usage examples
+- 🛠️ Enhanced development dependencies:
+  - Added `black>=21.0.0` for code formatting
+  - Added `isort>=5.0.0` for import sorting
+  - Added `build>=0.7.0` for package building
+  - Added `twine>=3.0.0` for PyPI publishing
+  - Added `pre-commit>=2.15.0` for git hooks
+  - Added `tox>=3.20.0` for testing automation
+- 🎨 Added maintainers field to project metadata
+- 📦 Added "all" optional dependencies group for complete installation
+- 🔗 Enhanced project URLs with Source and Issues links
+- 📄 Improved README content-type specification in pyproject.toml
+- ✅ Enhanced package metadata verification using importlib.metadata
+- 🔍 Improved CI workflows with better testing and validation
+
+### Removed
+- ❌ **Deleted requirements.txt** (consolidated into pyproject.toml)
+- ❌ **Deleted requirements-dev.txt** (consolidated into pyproject.toml)
+- ❌ **Deleted setup.py** (fully migrated to pyproject.toml)
+
+### Fixed
+- 🔧 Fixed package metadata verification in CI/CD workflows
+- ✅ Corrected test file naming convention (test_ASD_File_Reader.py → test_asd_file_reader.py)
+- 🔗 Updated all repository URLs from pyASD to pyASDReader
+- 📝 Fixed MANIFEST.in to properly include package data
+- 🐛 Improved error handling in asd_file_reader.py
+
+### Technical Improvements
+- Centralized all dependencies in pyproject.toml optional-dependencies
+- Improved package structure with proper namespace configuration
+- Enhanced setuptools_scm integration for version management
+- Better test coverage configuration targeting pyASDReader module
+- Streamlined build and publish workflows
+
 ## [1.1.0] - 2025-10-05
 
 ### Fixed
