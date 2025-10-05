@@ -23,7 +23,7 @@ The aspects to be tested are:
 """
 
 import unittest
-from src.ASD_File_Reader import ASDFile
+from pyASD import ASDFile
 
 class TestASDFile(unittest.TestCase):
 

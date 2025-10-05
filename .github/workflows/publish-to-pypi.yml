@@ -178,8 +178,8 @@ jobs:
 
     - name: Verify installation
       run: |
-        python -c "from src import ASDFile; print('✅ Successfully imported ASDFile')"
-        python -c "from src import __version__; print(f'📦 Package version: {__version__}')"
+        python -c "from pyASD import ASDFile; print('Successfully imported ASDFile')"
+        python -c "from pyASD import __version__; print(f'Package version: {__version__}')"
 
     - name: Verify package metadata
       run: |
