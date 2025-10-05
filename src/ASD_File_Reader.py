@@ -3,13 +3,15 @@
 '''
 @File    :   ASD_File_Reader.py
 @Time    :   2024/11/19 03:52:34
-@Author  :   Kai Cao 
+@Author  :   Kai Cao
 @Version :   1.0.0
 @Contact :   caokai_cgs@163.com
 @License :   (C)Copyright 2024-
 Copyright Statement:   Full Copyright
 @Desc    :   According to "ASD File Format version 8: Revision B"
 '''
+
+from __future__ import annotations  # Python 3.8 compatibility for type hints
 
 import os
 import struct
@@ -22,11 +24,19 @@ from collections import namedtuple
 from enum import Enum
 from .constant import (FileVersion_e, InstrumentType_e, InstrumentModel_e, SpectraType_e, SignatureState_e, AuditLogType_e, DataType_e, DataFormat_e, IT_ms_e, CalibrationType_e, SaturationError_e, ClassiferDataType_e)
 
+# Initialize module-level logger
+logger = logging.getLogger(__name__)
+
 class ASDFile(object):
 
     DEFAULT_DERIVATIVE_GAP = 5
-    
-    def __init__(self):
+
+    def __init__(self, filepath: str = None):
+        """Initialize ASDFile instance.
+
+        Args:
+            filepath: Optional path to ASD file. If provided, file will be read automatically.
+        """
         self.asdFileVersion = 0
         self.metadata = None
         self.spectrumData = None
@@ -44,20 +54,36 @@ class ASDFile(object):
         self.__asdFileStream = None
         self.wavelengths = None
 
+        # Auto-read file if filepath is provided
+        if filepath is not None:
+            self.read(filepath)
+
     def read(self: object, filePath: str) -> bool:
         readSuccess = False
-        if os.path.exists(filePath) and os.path.isfile(filePath):
-            try:
-                # read in file to memory(buffer)
-                with open(filePath, 'rb') as fileHandle:
-                    self.__asdFileStream = fileHandle.read()
-                    if self.__asdFileStream[-3:] == b'\xFF\xFE\xFD':
-                        self.__bom = self.__asdFileStream[-3:]
-                        self.__asdFileStream = self.__asdFileStream[:-3]
-            except Exception as e:
-                logger.exception(f"Error in reading the file.\nError: {e}")
+
+        # Check if file exists
+        if not (os.path.exists(filePath) and os.path.isfile(filePath)):
+            logger.error(f"File does not exist or is not a file: {filePath}")
+            return False
+
+        try:
+            # read in file to memory(buffer)
+            with open(filePath, 'rb') as fileHandle:
+                self.__asdFileStream = fileHandle.read()
+                if self.__asdFileStream[-3:] == b'\xFF\xFE\xFD':
+                    self.__bom = self.__asdFileStream[-3:]
+                    self.__asdFileStream = self.__asdFileStream[:-3]
+        except Exception as e:
+            logger.exception(f"Error in reading the file.\nError: {e}")
+            return False
+
         # refering C# Line 884 to identify the file version
         self.asdFileVersion, offset = self.__validate_fileVersion()
+
+        # Check if file version is valid
+        if self.asdFileVersion.value <= 0:
+            logger.error(f"Invalid ASD file version")
+            return False
         if self.asdFileVersion.value > 0:
             try:
                 offset = self.__parse_metadata(offset)
@@ -472,6 +498,8 @@ class ASDFile(object):
     def __parse_auditLogEvent(self: object, event: str) -> tuple:
         try:
             auditInfo = namedtuple('event', 'application appVersion name login time source function notes')
+            # Security note: xml.etree.ElementTree in Python 3.8+ has XXE protection by default
+            # External entities and DTD processing are disabled automatically
             root = ET.fromstring(event)
             application = root.find('Audit_Application').text
             appVersion = root.find('Audit_AppVersion').text
@@ -558,7 +586,7 @@ class ASDFile(object):
             errors.append(SaturationError_e.SWIR2_SATURATION)
         if flags2 & 0x08:
             errors.append(SaturationError_e.SWIR1_TEC_ALARM)
-        if flags2 & 0x16:
+        if flags2 & 0x10:  # Fixed: was 0x16 (22), should be 0x10 (16)
             errors.append(SaturationError_e.SWIR2_TEC_ALARM)
         return errors
 
@@ -848,7 +876,7 @@ class ASDFile(object):
 
 def setup_logging(log_file):
     # To generate a log file name that includes the date
-    print(f"Log file Path: {log_file}")
+    logger.info(f"Log file Path: {log_file}")
     # Set up logging format and level
     logging.basicConfig(
         level=logging.INFO,
