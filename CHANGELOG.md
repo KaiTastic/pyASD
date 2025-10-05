@@ -13,6 +13,50 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [1.2.1] - 2025-10-05
+
+### Added
+- ✨ **CITATION.cff** - Academic citation file for proper software citation
+  - Includes author information with ORCID placeholder
+  - Comprehensive metadata (abstract, keywords, repository info)
+  - MIT license specification
+  - Version and release date tracking
+- 📤 CITATION.cff now included in GitHub releases
+- 🔄 Automatic CITATION.cff version and date updates during release
+- 📊 Codecov integration for code coverage reporting
+  - Automatic coverage upload after test runs
+  - Per-platform and per-Python-version coverage tracking
+  - Coverage badges support
+
+### Changed
+- 🚀 Enhanced CI/CD workflows with performance improvements:
+  - Upgraded `actions/setup-python` from v4 to v5
+  - Added pip caching to all workflows for faster builds
+  - Streamlined cache configuration (removed redundant cache steps)
+  - Improved cache key structure using pyproject.toml
+- 🧪 Improved test workflow (`python-package.yml`):
+  - Better pip caching strategy
+  - Enhanced coverage reporting with Codecov
+  - More efficient dependency caching
+- 📦 Enhanced PyPI publishing workflow:
+  - Added CITATION.cff to release assets
+  - Automatic citation file updates on tag releases
+  - Improved release notes generation
+- 📚 Updated README.md with better formatting and organization
+
+### Fixed
+- 🔧 Fixed package metadata verification using `importlib.metadata` instead of manual version checking
+  - More accurate and reliable version detection
+  - Better compatibility with different Python versions
+  - Improved error handling in CI/CD pipelines
+
+### Technical Improvements
+- Reduced workflow execution time through better caching
+- Enhanced CI/CD reliability with updated actions
+- Improved maintainability of GitHub Actions workflows
+- Better separation of concerns in workflow steps
+- More robust release automation
+
 ## [1.2.0] - 2025-10-05
 
 ### Changed
