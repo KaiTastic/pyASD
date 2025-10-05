@@ -352,7 +352,7 @@ Comprehensive export capabilities beyond the standard ASCII format:
 
 - 📋 **GitHub Issues**: [Report bugs or request features](https://github.com/KaiTastic/pyASDReader/issues)
 - 📧 **Email**: `caokai_cgs@163.com` for direct support
-- 🔒 **Security**: Report vulnerabilities via our [Security Policy](SECURITY.md)
+- 🔒 **Security**: Report vulnerabilities via the [Security Policy](SECURITY.md)
 
 ### Community Guidelines
 
@@ -363,20 +363,25 @@ Comprehensive export capabilities beyond the standard ASCII format:
 
 ## Citation
 
-If you use pyASDReader in your research, please cite:
+If you use pyASDReader in your research, please cite it using the information from t he [CITATION.cff](CITATION.cff) file.
 
+GitHub provides a "Cite this repository" button in the sidebar that automatically generates citations in multiple formats.
+
+**BibTeX format**:
 ```bibtex
 @software{cao2025pyasdreader,
   author = {Cao, Kai},
   title = {pyASDReader: A Python Library for ASD Spectral File Reading},
   year = {2025},
   url = {https://github.com/KaiTastic/pyASDReader},
-  version = {1.0.0}
+  version = {see CITATION.cff for latest version}
 }
 ```
 
 **Plain text citation**:
-> Cao, Kai. (2025). pyASDReader: A Python Library for ASD Spectral File Reading. https://github.com/KaiTastic/pyASDReader
+> Cao, Kai. (2025). pyASDReader: A Python Library for ASD Spectral File Reading. Available at: https://github.com/KaiTastic/pyASDReader
+
+For the most up-to-date version number and citation details, please refer to the [CITATION.cff](CITATION.cff) file or use GitHub's citation feature.
 
 ## 📖 References
 
@@ -392,12 +397,6 @@ If you use pyASDReader in your research, please cite:
 ## License
 
 This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for complete details.
-
-### Built With
-
-- [NumPy](https://numpy.org/) - Numerical computing library
-- [Python](https://python.org/) - Programming language
-- [pytest](https://pytest.org/) - Testing framework
 
 ---
 

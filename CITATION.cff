@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "pyASDReader: A Python Library for ASD Spectral File Reading"
+authors:
+  - family-names: Cao
+    given-names: Kai
+    email: caokai_cgs@163.com
+    orcid: https://orcid.org/0000-0000-0000-0000
+repository-code: "https://github.com/KaiTastic/pyASDReader"
+url: "https://github.com/KaiTastic/pyASDReader"
+abstract: "A Python library for reading and parsing all versions (v1-v8) of ASD (Analytical Spectral Devices) binary spectral files from various instruments including FieldSpec, LabSpec, and TerraSpec spectroradiometers."
+keywords:
+  - ASD
+  - spectral files
+  - spectroradiometer
+  - remote sensing
+  - hyperspectral
+  - FieldSpec
+license: MIT
+version: 1.0.0
+date-released: 2025-03-12
