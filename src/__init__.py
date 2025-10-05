@@ -5,7 +5,8 @@ This package provides tools for reading all versions of ASD spectral files
 from various ASD spectroradiometer models.
 """
 
-from .asd_file_reader import ASDFile
+from ._version import __version__
+from .ASD_File_Reader import ASDFile
 from .constant import (
     FileVersion_e,
     InstrumentType_e,
@@ -22,6 +23,7 @@ from .constant import (
 )
 
 __all__ = [
+    "__version__",
     "ASDFile",
     # Enums from constant module
     "FileVersion_e",

@@ -1,0 +1,49 @@
+# MANIFEST.in - Include additional files in source distribution
+
+# Documentation
+include README.md
+include LICENSE
+include CHANGELOG.md
+
+# Configuration files
+include pyproject.toml
+
+# Source code and data files
+recursive-include src *.py
+recursive-include src *.mat
+
+# Tests (optional - include if you want tests in sdist)
+recursive-include tests *.py
+recursive-include tests/sample_data *.asd
+
+# Exclude unwanted files
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]
+recursive-exclude * .DS_Store
+recursive-exclude * *.swp
+recursive-exclude * *~
+
+# Exclude build artifacts
+exclude .gitignore
+exclude .coverage
+exclude htmlcov
+prune build
+prune dist
+prune *.egg-info
+prune .pytest_cache
+prune .tox
+prune .venv
+prune venv
+prune env
+
+# Exclude analysis and documentation files (they're in git but not needed in package)
+exclude PROJECT_IMPROVEMENT_ANALYSIS.md
+exclude ADDITIONAL_IMPROVEMENTS.md
+exclude FIXES_APPLIED.md
+exclude ROUND2_FIXES_APPLIED.md
+exclude CLAUDE.md
+
+# Exclude workflow and IDE files
+prune .github
+prune .vscode
+prune .idea

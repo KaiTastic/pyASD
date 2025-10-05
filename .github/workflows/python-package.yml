@@ -5,9 +5,9 @@ name: Python package
 
 on:
   push:
-    branches: [ "main" ]
-  # pull_request:
-  #   branches: [ "main" ]
+    branches: [ "master", "main" ]  # Support both branch naming conventions
+  pull_request:
+    branches: [ "master", "main" ]
 
 jobs:
   lint:
@@ -41,7 +41,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13", "3.x"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]  # Stable versions only
 
     runs-on: ${{ matrix.os }}
 
@@ -73,12 +73,10 @@ jobs:
     
     - name: Install project in development mode
       run: python -m pip install -e . --quiet
-      continue-on-error: true
-    
+
     - name: Run tests with detailed reporting
       run: |
-        python -m pytest tests/ --html=test-report-${{ matrix.os }}-py${{ matrix.python-version }}.html --self-contained-html --cov=src --cov-report=xml --cov-report=term-missing -v
-      continue-on-error: true
+        python -m pytest tests/ --html=test-report-${{ matrix.os }}-py${{ matrix.python-version }}.html --self-contained-html --cov=pyASD --cov-report=xml --cov-report=term-missing -v
     - name: Upload test results
       uses: actions/upload-artifact@v4
       if: always()
@@ -128,12 +126,12 @@ jobs:
         echo "| Job Type | Status | Details |" >> $GITHUB_STEP_SUMMARY
         echo "|----------|--------|---------|" >> $GITHUB_STEP_SUMMARY
         echo "| 🔍 **Code Quality (Lint)** | ${{ steps.check-results.outputs.lint_status }} | flake8, formatting checks |" >> $GITHUB_STEP_SUMMARY
-        echo "| 🧪 **Multi-Platform Tests** | ${{ steps.check-results.outputs.test_status }} | 21 test combinations |" >> $GITHUB_STEP_SUMMARY
+        echo "| 🧪 **Multi-Platform Tests** | ${{ steps.check-results.outputs.test_status }} | 15 test combinations |" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        
+
         # Create comprehensive matrix table header
-        echo "| Platform / Python Version | 3.8 | 3.9 | 3.10 | 3.11 | 3.12 | 3.13 | 3.x |" >> $GITHUB_STEP_SUMMARY
-        echo "|----------------------------|-----|-----|------|------|------|------|-----|" >> $GITHUB_STEP_SUMMARY
+        echo "| Platform / Python Version | 3.8 | 3.9 | 3.10 | 3.11 | 3.12 |" >> $GITHUB_STEP_SUMMARY
+        echo "|----------------------------|-----|-----|------|------|------|" >> $GITHUB_STEP_SUMMARY
         
         # Function to check status and return appropriate emoji
         get_status() {
@@ -157,7 +155,7 @@ jobs:
           
           # Build the row
           row="| **${os_display}** |"
-          for py in 3.8 3.9 3.10 3.11 3.12 3.13 3.x; do
+          for py in 3.8 3.9 3.10 3.11 3.12; do
             status=$(get_status $os $py)
             row="$row $status |"
           done
@@ -180,7 +178,7 @@ jobs:
         failed_tests=0
         
         for os in ubuntu-latest windows-latest macos-latest; do
-          for py in 3.8 3.9 3.10 3.11 3.12 3.13 3.x; do
+          for py in 3.8 3.9 3.10 3.11 3.12; do
             total_tests=$((total_tests + 1))
             if [ -d "test-results-${os}-py${py}" ]; then
               passed_tests=$((passed_tests + 1))
@@ -202,9 +200,9 @@ jobs:
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "| Platform | Architecture | Runner Image | Python Versions Tested |" >> $GITHUB_STEP_SUMMARY
         echo "|----------|--------------|--------------|-------------------------|" >> $GITHUB_STEP_SUMMARY
-        echo "| 🐧 **Ubuntu Latest** | x86_64 | ubuntu-22.04 | 3.8, 3.9, 3.10, 3.11, 3.12, 3.13, 3.x |" >> $GITHUB_STEP_SUMMARY
-        echo "| 🪟 **Windows Latest** | x86_64 | windows-2022 | 3.8, 3.9, 3.10, 3.11, 3.12, 3.13, 3.x |" >> $GITHUB_STEP_SUMMARY
-        echo "| 🍎 **macOS Latest** | x86_64 | macos-12 | 3.8, 3.9, 3.10, 3.11, 3.12, 3.13, 3.x |" >> $GITHUB_STEP_SUMMARY
+        echo "| 🐧 **Ubuntu Latest** | x86_64 | ubuntu-22.04 | 3.8, 3.9, 3.10, 3.11, 3.12 |" >> $GITHUB_STEP_SUMMARY
+        echo "| 🪟 **Windows Latest** | x86_64 | windows-2022 | 3.8, 3.9, 3.10, 3.11, 3.12 |" >> $GITHUB_STEP_SUMMARY
+        echo "| 🍎 **macOS Latest** | x86_64 | macos-12 | 3.8, 3.9, 3.10, 3.11, 3.12 |" >> $GITHUB_STEP_SUMMARY
         
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "📊 **Test Artifacts:** Available in the Actions artifacts section" >> $GITHUB_STEP_SUMMARY
@@ -212,9 +210,9 @@ jobs:
         echo "## 📝 How to Access Detailed Reports" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### 🔗 Quick Access Links" >> $GITHUB_STEP_SUMMARY
-        echo "1. **[📋 Actions Dashboard](https://github.com/KaiTastic/ASD_File_Reader/actions)** - View all workflow runs" >> $GITHUB_STEP_SUMMARY
-        echo "2. **[🔄 This Workflow](https://github.com/KaiTastic/ASD_File_Reader/actions/workflows/python-package.yml)** - All runs of this workflow" >> $GITHUB_STEP_SUMMARY
-        echo "3. **[📖 Main README](https://github.com/KaiTastic/ASD_File_Reader#compatibility-testing)** - Compatibility testing documentation" >> $GITHUB_STEP_SUMMARY
+        echo "1. **[📋 Actions Dashboard](https://github.com/KaiTastic/pyASD/actions)** - View all workflow runs" >> $GITHUB_STEP_SUMMARY
+        echo "2. **[🔄 This Workflow](https://github.com/KaiTastic/pyASD/actions/workflows/python-package.yml)** - All runs of this workflow" >> $GITHUB_STEP_SUMMARY
+        echo "3. **[📖 Main README](https://github.com/KaiTastic/pyASD#compatibility-testing)** - Compatibility testing documentation" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### � Artifact Contents" >> $GITHUB_STEP_SUMMARY
         echo "Each test combination generates:" >> $GITHUB_STEP_SUMMARY
