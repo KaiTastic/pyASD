@@ -1,19 +1,47 @@
-### ASD Spectral File Reader
+### pyASD - Python ASD Spectral File Reader
+
+[![PyPI version](https://img.shields.io/pypi/v/pyASD.svg)](https://pypi.org/project/pyASD/)
+[![Python versions](https://img.shields.io/pypi/pyversions/pyASD.svg)](https://pypi.org/project/pyASD/)
+[![License](https://img.shields.io/github/license/KaiTastic/pyASD.svg)](https://github.com/KaiTastic/pyASD/blob/main/LICENSE)
+
+## 📦 Installation
+
+```bash
+pip install pyASD
+```
+
+## 🚀 Quick Start
+
+```python
+from src import ASDFile
+
+# Option 1: Auto-load file on initialization
+asd = ASDFile("path/to/file.asd")
+
+# Option 2: Create instance first, then load file
+asd = ASDFile()
+asd.read("path/to/file.asd")
+
+# Access data
+wavelengths = asd.wavelengths  # Note: plural form
+reflectance = asd.reflectance
+metadata = asd.metadata
+```
 
 ##### To cite this repository:
 
-Cao, Kai. (2025). "ASD_File_Reader". https://github.com/KaiTastic/ASD_File_Reader
+Cao, Kai. (2025). "pyASD - Python ASD Spectral File Reader". https://github.com/KaiTastic/pyASD
 
 ### Repository Introduction
 
-The repo is create for reading the all versions of *.asd binary file in Python.
+A Python library for reading and parsing all versions of *.asd binary spectral files.
 
 ##### About the *.asd file
 
  The *.asd file supports for:
 
 > ASD AgriSpec, ASD FieldSpec range, ASD FieldSpec 4 Hi-Res NG, ASD FieldSpec 4 Hi-Res, ASD FieldSpec 4 Standard-Res, ASD FieldSpec 4 Wide-Res, ASD HandHeld 2 Pro, ASD HandHeld 2, ASD LabSpec range, ASD LabSpec 4 Bench, ASD LabSpec 4 Hi-Res, ASD LabSpec 4 Standard-Res, ASD TerraSpec range, ASD TerraSpec 4 Hi-Res, ASD TerraSpec 4 Standard-Res.
-> [ASD Inc., (2017). ASD File Format: Version 8 (Revision): 1-10. ](https://www.malvernpanalytical.com/en/learn/knowledge-center/user-manuals/asd-file-format-v8)
+> <a href="https://www.malvernpanalytical.com/en/learn/knowledge-center/user-manuals/asd-file-format-v8" target="_blank" rel="noopener noreferrer">ASD Inc., (2017). ASD File Format: Version 8 (Revision): 1-10.</a>
 
 ###   Description for Version 1.0.0 (ASD_File_Reader.py)
 
@@ -63,13 +91,13 @@ By querying the `coeffs` table (`src\asd_temp_corr_coeffs.mat`), we can get the 
 
 #### File Format Converter:
 
-Although the ASD Inc. official software **ViewSpecPro** has already offered the function "Process --> ASCII Export", to enhance the flexibility of ASD File Reader, the equivalent "ASCII Export" function, or a more powerful tool/module will be provided for further spectroscopy processing.
+Although the ASD Inc. official software **ViewSpecPro** has already offered the function "Process --> ASCII Export", to enhance the flexibility of pyASD, the equivalent "ASCII Export" function, or a more powerful tool/module will be provided for further spectroscopy processing.
 
 
 
 #### Reference
 
-[ASD Inc., (2017). ASD File Format: Version 8 (Revision): 1-10. ](https://www.malvernpanalytical.com/en/learn/knowledge-center/user-manuals/asd-file-format-v8)
+<a href="https://www.malvernpanalytical.com/en/learn/knowledge-center/user-manuals/asd-file-format-v8" target="_blank" rel="noopener noreferrer">ASD Inc., (2017). ASD File Format: Version 8 (Revision): 1-10.</a>
 
 ASD Inc., Indico Version 7 File Format: 1-9.
 
@@ -77,5 +105,5 @@ ASD Inc., (2008). ViewSpec Pro User Manual: 1-24.
 
 ASD Inc., (2015). FieldSpec 4 User Manual, pp. 1-10.
 
-[Hueni, A. and A. Bialek, (2017). "Cause, Effect, and Correction of Field Spectroradiometer Interchannel Radiometric Steps." IEEE Journal of Selected Topics in Applied Earth Observations and Remote Sensing 10(4): 1542-1551](https://ieeexplore.ieee.org/document/7819458).
+<a href="https://ieeexplore.ieee.org/document/7819458" target="_blank" rel="noopener noreferrer">Hueni, A. and A. Bialek, (2017). "Cause, Effect, and Correction of Field Spectroradiometer Interchannel Radiometric Steps." IEEE Journal of Selected Topics in Applied Earth Observations and Remote Sensing 10(4): 1542-1551</a>.
 

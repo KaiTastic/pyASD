@@ -1,0 +1,186 @@
+# This workflow publishes the package to PyPI when a version tag is pushed
+# Version number is automatically determined by setuptools-scm from the git tag
+# For more information see: https://packaging.python.org/en/latest/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/
+
+name: Publish to PyPI (Production Release)
+
+on:
+  # Trigger on semantic version tags (e.g., v1.0.0, v1.2.3, v2.0.0-rc1)
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  # Build the distribution packages
+  build:
+    name: Build distribution packages
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code with full history
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Full git history needed for setuptools-scm
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install build dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install build twine setuptools-scm
+
+    - name: Show version (from git tag via setuptools-scm)
+      run: |
+        python -m setuptools_scm
+        echo "Building version from tag: ${GITHUB_REF#refs/tags/}"
+
+    - name: Build distribution packages
+      run: python -m build
+
+    - name: Check distribution packages
+      run: python -m twine check dist/*
+
+    - name: List built packages
+      run: ls -lh dist/
+
+    - name: Store distribution packages
+      uses: actions/upload-artifact@v4
+      with:
+        name: python-package-distributions
+        path: dist/
+        retention-days: 7
+
+  # Publish to PyPI (production)
+  publish-to-pypi:
+    name: Publish to PyPI
+    needs: [build]
+    runs-on: ubuntu-latest
+
+    # Note: Create 'pypi' environment in GitHub repo Settings > Environments
+    # or comment out the environment section and use password instead
+    # environment:
+    #   name: pypi
+    #   url: https://pypi.org/project/pyASD/
+
+    permissions:
+      id-token: write  # Required for trusted publishing
+
+    steps:
+    - name: Download distribution packages
+      uses: actions/download-artifact@v4
+      with:
+        name: python-package-distributions
+        path: dist/
+
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        password: ${{ secrets.PYPI_API_TOKEN }}
+        verbose: true
+
+  # Create GitHub Release
+  create-github-release:
+    name: Create GitHub Release
+    needs: [publish-to-pypi]
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write  # Required to create release
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download distribution packages
+      uses: actions/download-artifact@v4
+      with:
+        name: python-package-distributions
+        path: dist/
+
+    - name: Extract version from tag
+      id: get_version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+    - name: Extract changelog for this version
+      id: changelog
+      run: |
+        # Extract the section for this version from CHANGELOG.md
+        VERSION=${{ steps.get_version.outputs.VERSION }}
+
+        # Read CHANGELOG and extract content for this version
+        if [ -f CHANGELOG.md ]; then
+          # Use awk to extract the relevant section
+          NOTES=$(awk "/## \[${VERSION}\]/,/## \[/{if (/## \[${VERSION}\]/) next; if (/## \[/) exit; print}" CHANGELOG.md | sed '/^$/d')
+
+          if [ -z "$NOTES" ]; then
+            NOTES="Release version ${VERSION}"
+          fi
+        else
+          NOTES="Release version ${VERSION}"
+        fi
+
+        # Save to file for multiline output
+        echo "$NOTES" > release_notes.txt
+        echo "NOTES_FILE=release_notes.txt" >> $GITHUB_OUTPUT
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        name: Release v${{ steps.get_version.outputs.VERSION }}
+        body_path: ${{ steps.changelog.outputs.NOTES_FILE }}
+        files: dist/*
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Post-publish verification
+  # Optimized: Test only critical combinations to save GitHub Actions minutes
+  # Full testing is done in python-package.yml workflow
+  verify-installation:
+    name: Verify PyPI Installation
+    needs: [publish-to-pypi]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Test on 3 OS with 3 representative Python versions (9 jobs total)
+        # Covers: oldest supported, middle, and latest stable
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.8", "3.11", "3.12"]
+
+    steps:
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Wait for PyPI to update (120 seconds)
+      run: sleep 120
+      shell: bash
+
+    - name: Install from PyPI
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install pyASD
+      continue-on-error: true
+
+    - name: Retry installation if failed (PyPI might be slow)
+      if: failure()
+      run: |
+        echo "First install attempt failed, waiting 60 more seconds..."
+        sleep 60
+        python -m pip install pyASD
+
+    - name: Verify installation
+      run: |
+        python -c "from src import ASDFile; print('✅ Successfully imported ASDFile')"
+        python -c "from src import __version__; print(f'📦 Package version: {__version__}')"
+
+    - name: Verify package metadata
+      run: |
+        python -c "import pkg_resources; dist = pkg_resources.get_distribution('pyASD'); print(f'📦 Package: {dist.project_name}'); print(f'📍 Location: {dist.location}'); print(f'🔖 Version: {dist.version}')"
