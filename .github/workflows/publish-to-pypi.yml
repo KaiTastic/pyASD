@@ -183,4 +183,4 @@ jobs:
 
     - name: Verify package metadata
       run: |
-        python -c "import pkg_resources; dist = pkg_resources.get_distribution('pyASDReader'); print(f'📦 Package: {dist.project_name}'); print(f'📍 Location: {dist.location}'); print(f'🔖 Version: {dist.version}')"
+        python -c "from importlib.metadata import version, metadata; m = metadata('pyASDReader'); print(f'Package: {m[\"Name\"]}'); print(f'Location: {m[\"Home-page\"]}'); print(f'Version: {version(\"pyASDReader\")}')"
