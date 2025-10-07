@@ -59,6 +59,13 @@ pip install -e ".[dev]"
 pip install -e ".[all]"
 ```
 
+## Documentation
+
+- **[CHANGELOG](CHANGELOG.md)** - Version history, feature updates, and bug fixes
+- **[Version Management Guide](VERSION_MANAGEMENT.md)** - Release workflow, branch strategy, and CI/CD automation
+- **[GitHub Issues](https://github.com/KaiTastic/pyASDReader/issues)** - Report bugs and request features
+- **[GitHub Discussions](https://github.com/KaiTastic/pyASDReader/discussions)** - Ask questions and share ideas
+
 ## Quick Start
 
 ```python

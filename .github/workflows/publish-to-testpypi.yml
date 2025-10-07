@@ -8,10 +8,10 @@ on:
     branches:
       - dev
 
-# Prevent concurrent runs
+# Prevent concurrent runs, cancel outdated workflow runs
 concurrency:
-  group: testpypi-publish
-  cancel-in-progress: false
+  group: testpypi-publish-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   # Build the distribution packages
@@ -63,6 +63,9 @@ jobs:
     needs: [build]
     runs-on: ubuntu-latest
 
+    permissions:
+      id-token: write  # Required for trusted publishing
+
     steps:
     - name: Download distribution packages
       uses: actions/download-artifact@v4
@@ -78,20 +81,29 @@ jobs:
         skip-existing: true  # Don't fail if version already exists
         verbose: true
 
-  # Lightweight verification (only Ubuntu + Python 3.11 to save resources)
+  # Post-publish verification
+  # Full testing matrix to match PyPI verification
   verify-installation:
     name: Verify TestPyPI Installation
     needs: [publish-to-testpypi]
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Test on 3 OS with 3 representative Python versions (9 jobs total)
+        # Covers: oldest supported, middle, and latest stable
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.8", "3.11", "3.12"]
 
     steps:
-    - name: Set up Python
+    - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
-        python-version: '3.11'
+        python-version: ${{ matrix.python-version }}
 
-    - name: Wait for TestPyPI to update (60 seconds)
-      run: sleep 60
+    - name: Wait for TestPyPI to update (120 seconds)
+      run: sleep 120
+      shell: bash
 
     - name: Install from TestPyPI
       run: |
@@ -99,11 +111,11 @@ jobs:
         python -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ pyASDReader
       continue-on-error: true
 
-    - name: Retry installation if failed
+    - name: Retry installation if failed (TestPyPI might be slow)
       if: failure()
       run: |
-        echo "First install attempt failed, waiting 30 more seconds..."
-        sleep 30
+        echo "First install attempt failed, waiting 60 more seconds..."
+        sleep 60
         python -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ pyASDReader
 
     - name: Verify installation
@@ -111,6 +123,6 @@ jobs:
         python -c "from pyASDReader import ASDFile; print('Successfully imported ASDFile')"
         python -c "from pyASDReader import __version__; print(f'Package version: {__version__}')"
 
-    - name: Show installation location
+    - name: Verify package metadata
       run: |
-        python -c "import pyASDReader; import os; print(f'Installed at: {os.path.dirname(pyASDReader.__file__)}')"
+        python -c 'from importlib.metadata import version, metadata; m = metadata("pyASDReader"); print(f"Package: {m[\"Name\"]}"); print(f"Location: {m[\"Home-page\"]}"); print(f"Version: {version(\"pyASDReader\")}")'

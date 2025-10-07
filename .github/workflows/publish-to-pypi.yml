@@ -11,6 +11,68 @@ on:
       - 'v*.*.*'
 
 jobs:
+  # Check if this commit was already tested on TestPyPI
+  check-previous-test:
+    name: Check if already tested on TestPyPI
+    runs-on: ubuntu-latest
+    outputs:
+      tested_on_testpypi: ${{ steps.check.outputs.tested }}
+      testpypi_run_id: ${{ steps.check.outputs.run_id }}
+      testpypi_url: ${{ steps.check.outputs.url }}
+
+    steps:
+    - name: Check TestPyPI workflow history
+      id: check
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        COMMIT_SHA="${{ github.sha }}"
+        echo "🔍 Checking if commit $COMMIT_SHA was tested in TestPyPI workflow..."
+
+        # Only accept test results from the last 7 days
+        SEVEN_DAYS_AGO=$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-7d +%Y-%m-%dT%H:%M:%SZ)
+
+        # Query TestPyPI workflow runs
+        TESTPYPI_RUN=$(gh api \
+          -H "Accept: application/vnd.github+json" \
+          "/repos/${{ github.repository }}/actions/workflows/publish-to-testpypi.yml/runs?status=success&per_page=50" \
+          --jq ".workflow_runs[] | select(.head_sha == \"$COMMIT_SHA\" and .created_at > \"$SEVEN_DAYS_AGO\") | {id: .id, created_at: .created_at, html_url: .html_url}" \
+          | head -n 1)
+
+        if [ -n "$TESTPYPI_RUN" ]; then
+          RUN_ID=$(echo "$TESTPYPI_RUN" | jq -r '.id')
+          CREATED_AT=$(echo "$TESTPYPI_RUN" | jq -r '.created_at')
+          HTML_URL=$(echo "$TESTPYPI_RUN" | jq -r '.html_url')
+
+          # Verify that the run included complete test matrix (9 verification jobs)
+          echo "📊 Verifying test completeness for run $RUN_ID..."
+          VERIFY_JOBS=$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/${{ github.repository }}/actions/runs/$RUN_ID/jobs" \
+            --jq '.jobs[] | select(.name | contains("Verify")) | .conclusion')
+
+          SUCCESS_COUNT=$(echo "$VERIFY_JOBS" | grep -c "success" || echo "0")
+
+          if [ "$SUCCESS_COUNT" -ge 9 ]; then
+            echo "✅ Found complete TestPyPI test for this commit"
+            echo "   Run ID: $RUN_ID"
+            echo "   Tested at: $CREATED_AT"
+            echo "   Successful jobs: $SUCCESS_COUNT/9"
+            echo "   URL: $HTML_URL"
+            echo "tested=true" >> $GITHUB_OUTPUT
+            echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
+            echo "url=$HTML_URL" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️  TestPyPI test found but incomplete ($SUCCESS_COUNT/9 jobs passed)"
+            echo "   Will run full verification tests"
+            echo "tested=false" >> $GITHUB_OUTPUT
+          fi
+        else
+          echo "ℹ️  No recent TestPyPI test found for this commit (or older than 7 days)"
+          echo "   Will run full verification tests"
+          echo "tested=false" >> $GITHUB_OUTPUT
+        fi
+
   # Build the distribution packages
   build:
     name: Build distribution packages
@@ -153,11 +215,12 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # Post-publish verification
-  # Optimized: Test only critical combinations to save GitHub Actions minutes
-  # Full testing is done in python-package.yml workflow
+  # Optimized: Skip if already tested on TestPyPI, otherwise run full verification
   verify-installation:
     name: Verify PyPI Installation
-    needs: [publish-to-pypi]
+    needs: [check-previous-test, publish-to-pypi]
+    # Only run if not already tested on TestPyPI
+    if: needs.check-previous-test.outputs.tested_on_testpypi != 'true'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -197,4 +260,37 @@ jobs:
 
     - name: Verify package metadata
       run: |
-        python -c "from importlib.metadata import version, metadata; m = metadata('pyASDReader'); print(f'Package: {m[\"Name\"]}'); print(f'Location: {m[\"Home-page\"]}'); print(f'Version: {version(\"pyASDReader\")}')"
+        python -c 'from importlib.metadata import version, metadata; m = metadata("pyASDReader"); print(f"Package: {m[\"Name\"]}"); print(f"Location: {m[\"Home-page\"]}"); print(f"Version: {version(\"pyASDReader\")}")'
+
+  # Verification summary
+  verification-summary:
+    name: Verification Summary
+    needs: [check-previous-test, publish-to-pypi, verify-installation]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Display verification status
+      run: |
+        if [ "${{ needs.check-previous-test.outputs.tested_on_testpypi }}" == "true" ]; then
+          echo "### ✅ Verification Status: REUSED" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "This commit was already fully tested on TestPyPI." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **TestPyPI Run**: [#${{ needs.check-previous-test.outputs.testpypi_run_id }}](${{ needs.check-previous-test.outputs.testpypi_url }})" >> $GITHUB_STEP_SUMMARY
+          echo "- **Test Matrix**: 9 combinations (3 OS × 3 Python versions)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✨ Saved ~45 minutes of GitHub Actions time by reusing tests!" >> $GITHUB_STEP_SUMMARY
+        elif [ "${{ needs.verify-installation.result }}" == "success" ]; then
+          echo "### ✅ Verification Status: COMPLETED" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Full verification completed successfully on PyPI." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Test Matrix**: 9 combinations (3 OS × 3 Python versions)" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "### ⚠️ Verification Status: SKIPPED/FAILED" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Verification was skipped or failed. Please check the logs." >> $GITHUB_STEP_SUMMARY
+        fi
