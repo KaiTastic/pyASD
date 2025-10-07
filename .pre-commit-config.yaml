@@ -58,3 +58,9 @@ repos:
         language: system
         pass_filenames: false
         files: CHANGELOG\.md$
+
+      - id: check-commit-message
+        name: Check commit message format
+        entry: python .pre-commit-hooks/check_commit_message.py
+        language: system
+        stages: [commit-msg]
