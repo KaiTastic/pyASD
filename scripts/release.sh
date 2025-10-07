@@ -110,6 +110,24 @@ else
     print_warning "pytest not found, skipping tests"
 fi
 
+# Check 5: Pre-commit hooks installed
+if [ -f ".git/hooks/pre-commit" ] && [ -f ".git/hooks/commit-msg" ]; then
+    print_info "Pre-commit hooks are installed"
+else
+    print_warning "Pre-commit hooks not installed. Version consistency will not be validated automatically."
+    echo ""
+    read -p "Do you want to continue without pre-commit hooks? (yes/no): " -r
+    if [[ ! $REPLY =~ ^[Yy][Ee][Ss]$ ]]; then
+        print_info "Release cancelled"
+        echo ""
+        echo "To install pre-commit hooks:"
+        echo "  pip install pre-commit"
+        echo "  pre-commit install"
+        echo "  pre-commit install --hook-type commit-msg"
+        exit 0
+    fi
+fi
+
 print_step "Step 2: Calculate Version Number"
 
 # Get current version from latest git tag
@@ -189,16 +207,53 @@ print_info "Updating CHANGELOG.md with version $NEW_VERSION and date $TODAY..."
 # Create backup
 cp CHANGELOG.md CHANGELOG.md.bak
 
-# Update CHANGELOG
-awk -v version="$NEW_VERSION" -v date="$TODAY" '
-/## \[Unreleased\]/ {
-    print $0
-    print ""
-    print "## [" version "] - " date
-    next
-}
-{ print }
-' CHANGELOG.md.bak > CHANGELOG.md
+# Extract [Unreleased] content and move it to new version
+python3 - <<EOF
+import re
+import sys
+
+with open('CHANGELOG.md.bak', 'r', encoding='utf-8') as f:
+    content = f.read()
+
+# Find [Unreleased] section and next version section
+unreleased_pattern = r'(## \[Unreleased\])\n+(.*?)(?=\n## \[|$)'
+match = re.search(unreleased_pattern, content, re.DOTALL)
+
+if not match:
+    print("Error: Could not find [Unreleased] section", file=sys.stderr)
+    sys.exit(1)
+
+unreleased_content = match.group(2).strip()
+
+# Insert new version section after [Unreleased] and clear [Unreleased] content
+new_section = f"""## [Unreleased]
+
+## [{sys.argv[1]}] - {sys.argv[2]}
+
+{unreleased_content}"""
+
+# Replace the [Unreleased] section
+# Handle both cases: when there's a next section (## [) or end of file ($)
+result = re.sub(
+    r'## \[Unreleased\].*?(?=\n## \[|$)',
+    new_section + '\n',
+    content,
+    count=1,
+    flags=re.DOTALL
+)
+
+with open('CHANGELOG.md', 'w', encoding='utf-8') as f:
+    f.write(result)
+
+print(f"Moved {len(unreleased_content)} characters from [Unreleased] to [{sys.argv[1]}]")
+EOF
+$NEW_VERSION $TODAY
+
+if [ $? -ne 0 ]; then
+    print_error "Failed to update CHANGELOG.md"
+    mv CHANGELOG.md.bak CHANGELOG.md
+    exit 1
+fi
 
 rm CHANGELOG.md.bak
 print_success "CHANGELOG.md updated"
@@ -211,17 +266,74 @@ head -20 CHANGELOG.md | grep -A 10 "## \[$NEW_VERSION\]"
 echo "---"
 echo ""
 
-read -p "Commit CHANGELOG changes? (yes/no): " -r
+read -p "Proceed with version updates? (yes/no): " -r
 if [[ ! $REPLY =~ ^[Yy][Ee][Ss]$ ]]; then
     print_info "Release cancelled. CHANGELOG.md has been modified but not committed."
     print_info "You can manually commit or revert the changes."
     exit 0
 fi
 
-# Commit CHANGELOG
-git add CHANGELOG.md README.md 2>/dev/null || git add CHANGELOG.md
-git commit -m "docs: Update CHANGELOG for v$NEW_VERSION release"
-print_success "CHANGELOG committed"
+print_step "Step 3.5: Synchronize Version Numbers"
+
+# CRITICAL: Update all version files BEFORE committing to avoid pre-commit hook conflicts.
+# The check_version_consistency.py pre-commit hook will validate that all these files
+# have matching version numbers. By updating them here first, the hook will pass.
+# Files to synchronize: CHANGELOG.md (already updated), README.md, src/_version.py, pyproject.toml
+
+# Update README.md citation version
+if grep -q "version = {" README.md; then
+    print_info "Updating README.md citation version..."
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        sed -i '' "s/version = {[0-9.]*}/version = {$NEW_VERSION}/" README.md
+    else
+        sed -i "s/version = {[0-9.]*}/version = {$NEW_VERSION}/" README.md
+    fi
+    print_success "README.md updated"
+fi
+
+# Update src/_version.py fallback version
+if [ -f "src/_version.py" ]; then
+    print_info "Updating src/_version.py fallback version..."
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        sed -i '' "s/__version__ = \"[0-9.]*\"/__version__ = \"$NEW_VERSION\"/" src/_version.py
+    else
+        sed -i "s/__version__ = \"[0-9.]*\"/__version__ = \"$NEW_VERSION\"/" src/_version.py
+    fi
+    print_success "src/_version.py updated"
+fi
+
+# Update pyproject.toml fallback version
+if grep -q "fallback_version" pyproject.toml; then
+    print_info "Updating pyproject.toml fallback version..."
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        sed -i '' "s/fallback_version = \"[0-9.]*\"/fallback_version = \"$NEW_VERSION\"/" pyproject.toml
+    else
+        sed -i "s/fallback_version = \"[0-9.]*\"/fallback_version = \"$NEW_VERSION\"/" pyproject.toml
+    fi
+    print_success "pyproject.toml updated"
+fi
+
+# Verify version consistency
+print_info "Verifying version consistency..."
+if [ -f ".pre-commit-hooks/check_version_consistency.py" ]; then
+    if python3 .pre-commit-hooks/check_version_consistency.py; then
+        print_success "All version numbers synchronized"
+    else
+        print_error "Version consistency check failed"
+        echo "Please check the files manually"
+        exit 1
+    fi
+fi
+
+# Commit all version changes
+print_info "Committing version updates..."
+git add CHANGELOG.md README.md src/_version.py pyproject.toml
+git commit -m "chore: Release v$NEW_VERSION
+
+- Update CHANGELOG.md with v$NEW_VERSION
+- Synchronize version numbers across all files
+- Move [Unreleased] content to v$NEW_VERSION"
+print_success "Version updates committed"
 
 print_step "Step 4: Merge dev to main"
 
