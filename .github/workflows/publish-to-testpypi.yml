@@ -7,6 +7,15 @@ on:
   push:
     branches:
       - dev
+    paths:
+      - 'src/**'
+      - 'pyproject.toml'
+      - '.github/workflows/publish-to-testpypi.yml'
+      - 'setup.py'
+      - 'MANIFEST.in'
+      # Also trigger on version/changelog updates (release preparation)
+      - 'CHANGELOG.md'
+      - 'README.md'
 
 # Prevent concurrent runs, cancel outdated workflow runs
 concurrency:
