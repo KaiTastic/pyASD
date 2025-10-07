@@ -125,4 +125,4 @@ jobs:
 
     - name: Verify package metadata
       run: |
-        python -c 'from importlib.metadata import version, metadata; m = metadata("pyASDReader"); print(f"Package: {m[\"Name\"]}"); print(f"Location: {m[\"Home-page\"]}"); print(f"Version: {version(\"pyASDReader\")}")'
+        python -c 'from importlib.metadata import version, metadata; m = metadata("pyASDReader"); pkg_name = m["Name"]; pkg_home = m["Home-page"]; pkg_ver = version("pyASDReader"); print(f"Package: {pkg_name}"); print(f"Location: {pkg_home}"); print(f"Version: {pkg_ver}")'
