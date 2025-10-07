@@ -134,10 +134,17 @@ jobs:
     needs: [build]
     runs-on: ubuntu-latest
 
-    # Note: Create 'pypi' environment in GitHub repo Settings > Environments
-    # or comment out the environment section and use password instead
+    # GitHub Environment Protection (optional but recommended)
+    # Provides manual approval gate for production releases
+    # Setup instructions: docs/GITHUB_ENVIRONMENT_SETUP.md
+    #
+    # To enable:
+    #   1. Create 'pypi-production' environment in Settings > Environments
+    #   2. Configure required reviewers
+    #   3. Uncomment the lines below
+    #
     # environment:
-    #   name: pypi
+    #   name: pypi-production
     #   url: https://pypi.org/project/pyASDReader/
 
     permissions:
