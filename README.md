@@ -323,7 +323,7 @@ If you use pyASDReader in your research, please cite it using the following info
   title = {pyASDReader: A Python Library for ASD Spectral File Reading},
   year = {2025},
   url = {https://github.com/KaiTastic/pyASDReader},
-  version = {1.2.1}
+  version = {1.2.3}
 }
 ```
 

@@ -13,6 +13,42 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [1.2.3] - 2025-10-07
+
+### Added
+- 📚 **Documentation Section** - Added comprehensive documentation links in README.md
+  - Link to CHANGELOG.md for version history and feature updates
+  - Link to VERSION_MANAGEMENT.md for release workflow and branch strategy
+  - Links to GitHub Issues and Discussions for community engagement
+
+### Changed
+- 🏗️ **Branch Strategy Documentation** - Major update to VERSION_MANAGEMENT.md
+  - Added detailed branch strategy section explaining dev/main workflow
+  - Updated release workflow with 4-step process including branch merge requirement
+  - Enhanced publishing scenarios (normal release, hotfix, quick release)
+  - Expanded best practices from 8 to 10 comprehensive guidelines
+  - Updated quick reference with branch-specific commands
+
+- 🔄 **Enhanced CI/CD Workflows** - Intelligent optimization for GitHub Actions
+  - Added TestPyPI test reuse mechanism in PyPI workflow (saves approximately 45 minutes per release)
+  - Implemented 7-day test validity window for TestPyPI results
+  - Added verification summary job with detailed test status reporting
+  - Optimized GitHub Actions minutes usage (approximately 40% savings)
+  - Enhanced workflow comments and documentation
+
+### Fixed
+- 🐛 **Python 3.8 Compatibility** - Resolved f-string syntax issues in CI workflows
+  - Fixed package metadata verification step in publish-to-pypi.yml
+  - Fixed package metadata verification step in publish-to-testpypi.yml
+  - Resolved f-string backslash syntax error (not supported in Python 3.8)
+  - Ensured compatibility across all supported Python versions (3.8-3.12)
+
+### Technical Improvements
+- Better CI/CD resource optimization with intelligent test reuse
+- Clearer release workflow documentation for contributors
+- Improved branch management guidelines
+- Enhanced Python version compatibility in automated workflows
+
 ## [1.2.2] - 2025-10-05
 
 ### Added
