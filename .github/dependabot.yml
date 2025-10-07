@@ -1,0 +1,91 @@
+# Dependabot Configuration for pyASDReader
+#
+# Automatically checks for dependency updates and creates PRs
+# See: https://docs.github.com/en/code-security/dependabot
+
+version: 2
+updates:
+  # Python dependencies from pip
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+
+    # Semantic versioning strategy
+    versioning-strategy: increase-if-necessary
+
+    # Group updates by type
+    groups:
+      # Group minor and patch updates together
+      development-dependencies:
+        patterns:
+          - "pytest*"
+          - "coverage"
+          - "flake8"
+          - "black"
+          - "isort"
+          - "pre-commit"
+          - "tox"
+        update-types:
+          - "minor"
+          - "patch"
+
+      build-dependencies:
+        patterns:
+          - "build"
+          - "twine"
+          - "setuptools*"
+          - "wheel"
+        update-types:
+          - "minor"
+          - "patch"
+
+      documentation-dependencies:
+        patterns:
+          - "sphinx*"
+        update-types:
+          - "minor"
+          - "patch"
+
+    # Labels for PRs
+    labels:
+      - "dependencies"
+      - "python"
+      - "automated"
+
+    # Commit message prefix
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+
+    # Assignees and reviewers
+    assignees:
+      - "KaiTastic"
+
+    # Ignore major version updates for stable dependencies
+    ignore:
+      # numpy 2.x may have breaking changes, keep at 1.x for now
+      - dependency-name: "numpy"
+        update-types: ["version-update:semver-major"]
+
+  # GitHub Actions workflows
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 3
+
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "automated"
+
+    commit-message:
+      prefix: "chore(ci)"
