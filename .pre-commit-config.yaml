@@ -41,3 +41,13 @@ repos:
       - id: flake8
         args: ['--max-line-length=120', '--extend-ignore=E203,W503']
         exclude: ^tests/
+
+  # Custom hooks - version consistency check
+  - repo: local
+    hooks:
+      - id: check-version-consistency
+        name: Check version consistency
+        entry: python .pre-commit-hooks/check_version_consistency.py
+        language: system
+        pass_filenames: false
+        files: (CHANGELOG\.md|README\.md|pyproject\.toml|src/_version\.py)$
