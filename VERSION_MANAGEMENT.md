@@ -24,13 +24,16 @@ This project follows a **two-branch workflow** for stable releases:
   - Pushes trigger TestPyPI publishing and full test suite
   - Used for pre-release validation
 
-- **main branch**: Production releases only
+- **main branch**: Production releases only (PRIMARY BRANCH)
   - Only receives merges from dev
   - Version tags are created here
   - Tags trigger PyPI publishing and GitHub releases
   - Represents stable, released code
+  - DEFAULT branch on GitHub
 
 **Key Principle**: All version releases must originate from the main branch after merging from dev.
+
+**Note**: The legacy `master` branch has been removed. All development now uses `main` as the primary branch (renamed in v1.1.0).
 
 ## Configuration
 
