@@ -51,3 +51,10 @@ repos:
         language: system
         pass_filenames: false
         files: (CHANGELOG\.md|README\.md|pyproject\.toml|src/_version\.py)$
+
+      - id: check-changelog-format
+        name: Check CHANGELOG.md format
+        entry: python .pre-commit-hooks/check_changelog_format.py
+        language: system
+        pass_filenames: false
+        files: CHANGELOG\.md$
