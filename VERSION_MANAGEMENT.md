@@ -481,6 +481,28 @@ python -m twine upload dist/*
     - Prevents divergence between branches
     - Use `git merge main` on dev branch after hotfix releases
 
+## Automated Release Script
+
+For maintainers, use the automated release script for streamlined releases:
+
+```bash
+# Automated release (recommended)
+bash scripts/release.sh patch  # 1.2.3 -> 1.2.4
+bash scripts/release.sh minor  # 1.2.3 -> 1.3.0
+bash scripts/release.sh major  # 1.2.3 -> 2.0.0
+```
+
+The script handles:
+- Pre-flight checks (branch, working directory, tests)
+- CHANGELOG.md updates
+- Version tagging
+- Branch merging (dev -> main)
+- Tag pushing (triggers CI/CD)
+
+**Total time**: ~2 minutes of manual work + ~8 minutes CI/CD
+
+See `scripts/release.sh` for details.
+
 ## Quick Reference
 
 ```bash
@@ -534,9 +556,54 @@ pip index versions pyASDReader
 # https://github.com/YOUR_USERNAME/ASD_File_Reader/actions
 ```
 
+## Emergency Procedures
+
+For critical issues requiring version rollback:
+
+See [VERSION_ROLLBACK.md](docs/VERSION_ROLLBACK.md) for:
+- Quick rollback procedure (10-15 minutes)
+- Detailed rollback steps
+- Post-rollback actions
+- Prevention strategies
+
+**When to rollback**:
+- Critical bugs affecting core functionality
+- Security vulnerabilities
+- Data corruption issues
+- Major compatibility problems
+
+## Additional Documentation
+
+- **[CONTRIBUTING.md](CONTRIBUTING.md)**: Contribution guidelines
+- **[VERSION_ROLLBACK.md](docs/VERSION_ROLLBACK.md)**: Emergency rollback procedures
+- **[GITHUB_ENVIRONMENT_SETUP.md](docs/GITHUB_ENVIRONMENT_SETUP.md)**: Production deployment protection
+
+## Automation and Tools
+
+### Pre-commit Hooks
+- Version consistency check
+- CHANGELOG format validation
+- Commit message format validation
+
+Setup: `pre-commit install && pre-commit install --hook-type commit-msg`
+
+### Dependabot
+- Automated dependency updates
+- Weekly checks (Mondays 09:00 UTC)
+- Grouped updates by category
+
+Config: `.github/dependabot.yml`
+
+### CI/CD Workflows
+- **python-package.yml**: Full testing (15 combinations)
+- **publish-to-testpypi.yml**: Dev branch publishing (9 combinations)
+- **publish-to-pypi.yml**: Production releases (intelligent test reuse)
+
 ## References
 
 - [setuptools_scm documentation](https://setuptools-scm.readthedocs.io/)
 - [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - [PEP 440 - Version Identification](https://peps.python.org/pep-0440/)
 - [Git Tagging Documentation](https://git-scm.com/book/en/v2/Git-Basics-Tagging)
+- [Conventional Commits](https://www.conventionalcommits.org/)
+- [Keep a Changelog](https://keepachangelog.com/)
