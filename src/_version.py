@@ -9,4 +9,4 @@ except (ImportError, LookupError):
     # Fallback version when setuptools_scm is not available
     # or when not in a git repository
     # Use actual release version as fallback
-    __version__ = "1.1.0"
+    __version__ = "1.2.3"
