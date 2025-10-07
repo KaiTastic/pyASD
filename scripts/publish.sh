@@ -47,6 +47,31 @@ print_info "Starting PyPI publishing process for pyASDReader..."
 print_info "Target: $TARGET"
 print_info "Project root: $PROJECT_ROOT"
 
+# Safety check 1: Verify branch for production releases
+if [ "$TARGET" == "prod" ]; then
+    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+    if [ "$CURRENT_BRANCH" != "main" ]; then
+        print_error "Production releases must be made from 'main' branch"
+        print_error "Current branch: $CURRENT_BRANCH"
+        print_error "Please switch to main branch and merge your changes first"
+        exit 1
+    fi
+    print_info "✓ Branch check passed: on main branch"
+fi
+
+# Safety check 2: Verify git working directory is clean
+if ! git diff-index --quiet HEAD -- 2>/dev/null; then
+    print_warning "Warning: You have uncommitted changes"
+    git status --short
+    read -p "Continue anyway? (yes/no): " -r
+    if [[ ! $REPLY =~ ^[Yy][Ee][Ss]$ ]]; then
+        print_info "Publishing cancelled"
+        exit 0
+    fi
+else
+    print_info "✓ Git working directory is clean"
+fi
+
 # Check if required tools are installed
 print_info "Checking required tools..."
 if ! command -v python3 &> /dev/null; then
@@ -82,6 +107,32 @@ else
 fi
 print_info "Version: $VERSION"
 
+# Safety check 3: Verify version consistency
+if [ -f ".pre-commit-hooks/check_version_consistency.py" ]; then
+    print_info "Checking version consistency..."
+    if ! python3 .pre-commit-hooks/check_version_consistency.py; then
+        print_error "Version consistency check failed"
+        print_error "Please ensure all version numbers are synchronized"
+        exit 1
+    fi
+fi
+
+# Safety check 4: Verify CHANGELOG has entry for this version
+if [ "$TARGET" == "prod" ] && [ "$VERSION" != "(determined during build)" ]; then
+    if ! grep -q "## \[$VERSION\]" CHANGELOG.md 2>/dev/null; then
+        print_warning "Warning: No CHANGELOG entry found for version $VERSION"
+        print_warning "Please ensure CHANGELOG.md is updated before releasing"
+        read -p "Continue anyway? (yes/no): " -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy][Ee][Ss]$ ]]; then
+            print_info "Publishing cancelled"
+            exit 0
+        fi
+    else
+        print_info "✓ CHANGELOG entry found for version $VERSION"
+    fi
+fi
+
 # Confirm before proceeding
 if [ "$TARGET" == "prod" ]; then
     print_warning "You are about to publish version $VERSION to PyPI (production)"
@@ -98,13 +149,29 @@ print_info "Step 1: Cleaning previous build artifacts..."
 rm -rf build/ dist/ *.egg-info src/*.egg-info
 print_info "Cleaned successfully"
 
-# Step 2: Run tests (optional, uncomment if you want to enforce tests)
-# print_info "Step 2: Running tests..."
-# if ! python3 -m pytest tests/; then
-#     print_error "Tests failed. Publishing cancelled"
-#     exit 1
-# fi
-# print_info "All tests passed"
+# Step 2: Run tests (recommended for production releases)
+if [ "$TARGET" == "prod" ]; then
+    print_info "Step 2: Running tests..."
+    if command -v pytest &> /dev/null; then
+        if ! python3 -m pytest tests/ -v; then
+            print_error "Tests failed. Publishing cancelled"
+            print_error "Fix the failing tests before publishing to production PyPI"
+            exit 1
+        fi
+        print_info "All tests passed"
+    else
+        print_warning "pytest not found, skipping tests"
+        print_warning "It is recommended to run tests before production releases"
+        read -p "Continue without running tests? (yes/no): " -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy][Ee][Ss]$ ]]; then
+            print_info "Publishing cancelled"
+            exit 0
+        fi
+    fi
+else
+    print_info "Step 2: Skipping tests for TestPyPI (optional for testing)"
+fi
 
 # Step 3: Build the package
 print_info "Step 2: Building the package..."
