@@ -14,6 +14,80 @@
 
 set -e  # Exit on error
 
+# State tracking for error recovery
+RELEASE_STATE_FILE=".release_state.tmp"
+ORIGINAL_BRANCH=""
+RELEASE_STAGE=""
+
+# Cleanup function for error recovery
+cleanup_on_error() {
+    local exit_code=$?
+
+    if [ $exit_code -ne 0 ]; then
+        echo ""
+        print_error "Release process failed at stage: ${RELEASE_STAGE:-unknown}"
+        echo ""
+        echo "Recovery instructions:"
+
+        case "$RELEASE_STAGE" in
+            "CHANGELOG_UPDATE")
+                echo "  1. Check CHANGELOG.md for partial updates"
+                echo "  2. Restore from backup if needed: mv CHANGELOG.md.bak CHANGELOG.md"
+                echo "  3. Fix the issue and re-run the release script"
+                ;;
+            "VERSION_SYNC")
+                echo "  1. Uncommitted changes exist in version files"
+                echo "  2. Review changes: git diff"
+                echo "  3. Either commit manually or restore: git restore CHANGELOG.md README.md src/_version.py pyproject.toml"
+                ;;
+            "MERGE_TO_MAIN")
+                echo "  1. Currently on branch: $(git rev-parse --abbrev-ref HEAD)"
+                echo "  2. Resolve merge conflicts if any"
+                echo "  3. After resolving, continue with:"
+                echo "     git add <resolved-files>"
+                echo "     git commit"
+                echo "     git tag -a v${NEW_VERSION} -m \"Release v${NEW_VERSION}\""
+                echo "     git push origin main"
+                echo "     git push origin v${NEW_VERSION}"
+                echo "  Or abort the merge:"
+                echo "     git merge --abort"
+                echo "     git checkout ${ORIGINAL_BRANCH}"
+                ;;
+            "TAGGING")
+                echo "  1. Main branch updated but tag not created"
+                echo "  2. Create tag manually:"
+                echo "     git checkout main"
+                echo "     git tag -a v${NEW_VERSION} -m \"Release v${NEW_VERSION}\""
+                echo "     git push origin main"
+                echo "     git push origin v${NEW_VERSION}"
+                ;;
+            "PUSHING")
+                echo "  1. Tag created but not pushed"
+                echo "  2. Push manually:"
+                echo "     git push origin main"
+                echo "     git push origin v${NEW_VERSION}"
+                ;;
+            *)
+                echo "  1. Review git status: git status"
+                echo "  2. Review recent commits: git log -3 --oneline"
+                echo "  3. Check current branch: git branch"
+                if [ -n "$ORIGINAL_BRANCH" ]; then
+                    echo "  4. Return to original branch: git checkout ${ORIGINAL_BRANCH}"
+                fi
+                ;;
+        esac
+
+        echo ""
+        echo "For more help, see docs/VERSION_ROLLBACK.md"
+
+        # Clean up state file
+        rm -f "$RELEASE_STATE_FILE"
+    fi
+}
+
+# Set up error trap
+trap cleanup_on_error EXIT ERR INT TERM
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -66,6 +140,8 @@ print_step "Step 1: Pre-flight Checks"
 
 # Check 1: Must be on dev branch
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+ORIGINAL_BRANCH="$CURRENT_BRANCH"  # Track original branch for error recovery
+
 if [ "$CURRENT_BRANCH" != "dev" ]; then
     print_error "Releases must be initiated from 'dev' branch"
     print_error "Current branch: $CURRENT_BRANCH"
@@ -201,6 +277,7 @@ if [ "$UNRELEASED_CONTENT" -lt 2 ]; then
 fi
 
 # Update CHANGELOG: Move [Unreleased] content to new version
+RELEASE_STAGE="CHANGELOG_UPDATE"
 TODAY=$(date +%Y-%m-%d)
 print_info "Updating CHANGELOG.md with version $NEW_VERSION and date $TODAY..."
 
@@ -275,6 +352,7 @@ fi
 
 print_step "Step 3.5: Synchronize Version Numbers"
 
+RELEASE_STAGE="VERSION_SYNC"
 # CRITICAL: Update all version files BEFORE committing to avoid pre-commit hook conflicts.
 # The check_version_consistency.py pre-commit hook will validate that all these files
 # have matching version numbers. By updating them here first, the hook will pass.
@@ -337,6 +415,7 @@ print_success "Version updates committed"
 
 print_step "Step 4: Merge dev to main"
 
+RELEASE_STAGE="MERGE_TO_MAIN"
 print_info "Switching to main branch..."
 git checkout main
 
@@ -357,6 +436,7 @@ print_success "Merged dev to main"
 
 print_step "Step 5: Create and Push Version Tag"
 
+RELEASE_STAGE="TAGGING"
 # Create annotated tag
 TAG_MESSAGE="Release v$NEW_VERSION
 
@@ -367,6 +447,7 @@ Generated with [Claude Code](https://claude.com/claude-code)"
 git tag -a "v$NEW_VERSION" -m "$TAG_MESSAGE"
 print_success "Created tag v$NEW_VERSION"
 
+RELEASE_STAGE="PUSHING"
 # Push main branch
 print_info "Pushing main branch..."
 git push origin main
