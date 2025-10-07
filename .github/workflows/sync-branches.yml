@@ -1,0 +1,308 @@
+# Automatic Branch Synchronization Workflow
+#
+# Purpose: Automatically sync dev branch with main after hotfixes or releases
+# Trigger: Push to main branch (excluding merges from dev)
+#
+# Behavior:
+#   1. Detects if push to main is from dev merge (if yes, skip)
+#   2. Attempts automatic merge of main into dev
+#   3. If successful: Pushes to dev automatically
+#   4. If conflicts: Creates GitHub issue for manual resolution
+#
+# This prevents branch divergence and ensures dev has all hotfix changes.
+
+name: Auto-Sync Branches
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # Allow manual trigger
+
+# Prevent concurrent sync operations
+concurrency:
+  group: branch-sync
+  cancel-in-progress: false
+
+jobs:
+  auto-sync:
+    name: Sync dev with main
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write  # Required to push to dev branch
+      issues: write    # Required to create reminder issues
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Full history needed for merging
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Configure git
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+
+    - name: Fetch all branches
+      run: |
+        git fetch origin main
+        git fetch origin dev
+
+    - name: Check if this was a merge from dev
+      id: check_source
+      run: |
+        # Get commit message
+        COMMIT_MSG=$(git log -1 --pretty=%B)
+
+        # Check if this is a merge commit from dev
+        if echo "$COMMIT_MSG" | grep -q "Merge branch 'dev'"; then
+          echo "is_dev_merge=true" >> $GITHUB_OUTPUT
+          echo "ℹ️ This is a merge from dev branch, no sync needed"
+        else
+          echo "is_dev_merge=false" >> $GITHUB_OUTPUT
+          echo "⚠️ This is a direct commit or hotfix on main, will attempt sync"
+        fi
+
+    - name: Check branch divergence
+      id: check_divergence
+      if: steps.check_source.outputs.is_dev_merge != 'true'
+      run: |
+        # Check if main has commits not in dev
+        AHEAD_COUNT=$(git rev-list --count origin/dev..origin/main)
+
+        echo "ahead_count=$AHEAD_COUNT" >> $GITHUB_OUTPUT
+
+        if [ "$AHEAD_COUNT" -gt 0 ]; then
+          echo "diverged=true" >> $GITHUB_OUTPUT
+          echo "📊 Main is $AHEAD_COUNT commit(s) ahead of dev"
+        else
+          echo "diverged=false" >> $GITHUB_OUTPUT
+          echo "✅ Branches are already in sync"
+        fi
+
+    - name: Attempt automatic sync
+      id: auto_merge
+      if: steps.check_divergence.outputs.diverged == 'true'
+      run: |
+        git checkout dev
+        git pull origin dev
+
+        echo "Attempting to merge main into dev..."
+
+        if git merge origin/main --no-edit; then
+          echo "merge_success=true" >> $GITHUB_OUTPUT
+          echo "✅ Merge successful, no conflicts"
+
+          # Get merge commit hash
+          MERGE_COMMIT=$(git rev-parse HEAD)
+          echo "merge_commit=$MERGE_COMMIT" >> $GITHUB_OUTPUT
+        else
+          echo "merge_success=false" >> $GITHUB_OUTPUT
+          echo "❌ Merge failed due to conflicts"
+          git merge --abort
+        fi
+
+    - name: Push merged changes to dev
+      if: steps.auto_merge.outputs.merge_success == 'true'
+      run: |
+        git push origin dev
+        echo "✅ Successfully pushed merged changes to dev branch"
+
+    - name: Get commit details for issue
+      id: commit_info
+      if: steps.auto_merge.outputs.merge_success == 'false'
+      run: |
+        # Get list of commits on main not in dev
+        COMMITS=$(git log --oneline origin/dev..origin/main)
+
+        echo "commits<<EOF" >> $GITHUB_OUTPUT
+        echo "$COMMITS" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+        # Get author of latest commit
+        AUTHOR=$(git log -1 --pretty=format:'%an')
+        echo "author=$AUTHOR" >> $GITHUB_OUTPUT
+
+        # Get conflicting files
+        git checkout dev
+        git merge origin/main --no-edit 2>&1 | tee merge_output.txt || true
+        CONFLICTS=$(grep "CONFLICT" merge_output.txt || echo "Unable to determine conflicting files")
+        git merge --abort 2>/dev/null || true
+
+        echo "conflicts<<EOF" >> $GITHUB_OUTPUT
+        echo "$CONFLICTS" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    - name: Create manual sync issue
+      if: steps.auto_merge.outputs.merge_success == 'false'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const ahead_count = '${{ steps.check_divergence.outputs.ahead_count }}';
+          const commits = `${{ steps.commit_info.outputs.commits }}`;
+          const author = '${{ steps.commit_info.outputs.author }}';
+          const conflicts = `${{ steps.commit_info.outputs.conflicts }}`;
+
+          // Check if reminder issue already exists
+          const issues = await github.rest.issues.listForRepo({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            state: 'open',
+            labels: 'sync-required'
+          });
+
+          const existingIssue = issues.data.find(issue =>
+            issue.title.includes('Manual Branch Sync Required')
+          );
+
+          const body = `## ⚠️ Manual Branch Sync Required
+
+          The automatic sync from \`main\` to \`dev\` failed due to merge conflicts.
+
+          **Commits ahead**: ${ahead_count}
+
+          **Recent commits on main (not in dev)**:
+          \`\`\`
+          ${commits}
+          \`\`\`
+
+          **Conflicts detected**:
+          \`\`\`
+          ${conflicts}
+          \`\`\`
+
+          **Action Required**:
+
+          Please manually resolve conflicts and merge \`main\` to \`dev\`:
+
+          \`\`\`bash
+          # 1. Checkout dev branch
+          git checkout dev
+          git pull origin dev
+
+          # 2. Merge main (will show conflicts)
+          git merge main
+
+          # 3. Resolve conflicts in your editor
+          #    Look for <<<<<<< markers and resolve manually
+
+          # 4. Stage resolved files
+          git add <resolved-files>
+
+          # 5. Complete the merge
+          git commit
+
+          # 6. Push to dev
+          git push origin dev
+          \`\`\`
+
+          **Why is this important?**
+          - Ensures dev has all hotfixes from main
+          - Prevents divergence between branches
+          - Maintains consistency for next release
+
+          **Context**:
+          - Triggered by: ${context.sha.substring(0, 7)}
+          - Latest commit author: ${author}
+          - Workflow run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}
+
+          **Note**: This issue will be automatically closed when branches are synced.
+
+          ---
+          *This is an automated alert. Automatic sync failed, manual intervention needed.*
+          `;
+
+          if (existingIssue) {
+            // Update existing issue
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: existingIssue.number,
+              body: body
+            });
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: existingIssue.number,
+              body: `🔄 Updated: Main branch now has ${ahead_count} commit(s) ahead of dev with conflicts.`
+            });
+
+            console.log(`Updated existing issue #${existingIssue.number}`);
+          } else {
+            // Create new issue
+            const issue = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '⚠️ Manual Branch Sync Required: Conflicts in main→dev',
+              body: body,
+              labels: ['sync-required', 'urgent']
+            });
+
+            console.log(`Created new issue #${issue.data.number}`);
+          }
+
+    - name: Close sync issue if branches are now synced
+      if: steps.check_divergence.outputs.diverged == 'false' || steps.auto_merge.outputs.merge_success == 'true'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          // Find open sync reminder issues
+          const issues = await github.rest.issues.listForRepo({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            state: 'open',
+            labels: 'sync-required'
+          });
+
+          for (const issue of issues.data) {
+            if (issue.title.includes('Manual Branch Sync Required')) {
+              // Close the issue
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: 'closed'
+              });
+
+              // Add closing comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: '✅ Branches are now in sync. Closing this issue.'
+              });
+
+              console.log(`Closed issue #${issue.number}`);
+            }
+          }
+
+    - name: Summary
+      if: always()
+      run: |
+        echo "## Branch Sync Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        if [ "${{ steps.check_source.outputs.is_dev_merge }}" == "true" ]; then
+          echo "✅ **Status**: Skipped (merge from dev)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "This push was a merge from dev branch, no sync needed." >> $GITHUB_STEP_SUMMARY
+        elif [ "${{ steps.check_divergence.outputs.diverged }}" == "false" ]; then
+          echo "✅ **Status**: Already in sync" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Branches are already synchronized." >> $GITHUB_STEP_SUMMARY
+        elif [ "${{ steps.auto_merge.outputs.merge_success }}" == "true" ]; then
+          echo "✅ **Status**: Auto-synced successfully" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Commits merged: ${{ steps.check_divergence.outputs.ahead_count }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Merge commit: \`${{ steps.auto_merge.outputs.merge_commit }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Dev branch has been updated automatically" >> $GITHUB_STEP_SUMMARY
+        elif [ "${{ steps.auto_merge.outputs.merge_success }}" == "false" ]; then
+          echo "⚠️ **Status**: Manual intervention required" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Commits ahead: ${{ steps.check_divergence.outputs.ahead_count }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Automatic merge failed due to conflicts" >> $GITHUB_STEP_SUMMARY
+          echo "- Issue created for manual resolution" >> $GITHUB_STEP_SUMMARY
+        fi

@@ -42,16 +42,12 @@ repos:
         args: ['--max-line-length=120', '--extend-ignore=E203,W503']
         exclude: ^tests/
 
-  # Custom hooks - version consistency check
+  # Custom hooks
+  # Note: Version consistency check removed from pre-commit to avoid conflicts
+  # with setuptools_scm dynamic versioning. The check is now performed in CI/CD.
+  # To run manually: python .pre-commit-hooks/check_version_consistency.py
   - repo: local
     hooks:
-      - id: check-version-consistency
-        name: Check version consistency
-        entry: python .pre-commit-hooks/check_version_consistency.py
-        language: system
-        pass_filenames: false
-        files: (CHANGELOG\.md|README\.md|pyproject\.toml|src/_version\.py)$
-
       - id: check-changelog-format
         name: Check CHANGELOG.md format
         entry: python .pre-commit-hooks/check_changelog_format.py

@@ -1,11 +1,37 @@
 # Version Management Guide
 
+> **📚 New Documentation Structure**: This guide has been reorganized for better clarity.
+> - **This file**: Quick reference and core workflows
+> - **[docs/CI_CD_WORKFLOWS.md](docs/CI_CD_WORKFLOWS.md)**: Detailed CI/CD pipeline information
+> - **[docs/RELEASE_EXAMPLES.md](docs/RELEASE_EXAMPLES.md)**: Step-by-step release scenarios
+
 ## Overview
 
 pyASDReader uses **setuptools_scm** for automatic version management based on Git tags. This ensures version consistency across:
 - Local development environment
 - PyPI packages
 - GitHub releases
+
+### Release Tools
+
+Python-based tools for improved cross-platform compatibility:
+
+```bash
+# Validate release readiness (strict mode enforces semantic versioning)
+python scripts/validate_release.py --run-tests --strict
+
+# Manage CHANGELOG.md structure
+python scripts/utils/changelog_manager.py release 1.2.4
+```
+
+These tools are automatically used by `scripts/release.sh` with strict mode enabled by default.
+
+**Note**: Version numbers are automatically managed by setuptools_scm from Git tags. No manual version file editing is needed.
+
+**Semantic Versioning Enforcement**: The release script now enforces semantic versioning rules in strict mode:
+- **Patch releases** (1.2.3 → 1.2.4): Only fixes and security updates allowed
+- **Minor releases** (1.2.3 → 1.3.0): New features without breaking changes
+- **Major releases** (1.2.3 → 2.0.0): Breaking changes, removals, or deprecations
 
 ## Single Source of Truth
 
@@ -45,13 +71,13 @@ dynamic = ["version"]  # Version is dynamic, not hardcoded
 [tool.setuptools_scm]
 version_scheme = "guess-next-dev"
 local_scheme = "no-local-version"
-fallback_version = "1.0.0"
+fallback_version = "0.0.0"  # For uninitialized/non-git environments only
 ```
 
 **How it works:**
 - **With Git tag**: Uses tag as version (e.g., `v1.2.0` → `1.2.0`)
 - **Between tags**: Adds dev suffix (e.g., `1.2.0.dev3+g7a8b9c0`)
-- **No Git/tags**: Falls back to `1.0.0`
+- **No Git/tags**: Falls back to `0.0.0` (indicates uninitialized environment)
 
 ## Release Workflow
 
@@ -69,8 +95,8 @@ git push origin dev
 # Triggers TestPyPI workflow:
 # - Builds package
 # - Publishes to TestPyPI
-# - Runs full test suite (9 combinations)
-# - Takes approximately 22 minutes
+# - Runs full test suite (15 combinations)
+# - Takes approximately 35 minutes
 
 # Version during development: 1.1.0.dev1+g7100d29
 ```
@@ -168,7 +194,7 @@ The project uses a two-stage automated publishing workflow, which is covered in 
 # Stage 1: Development Testing (TestPyPI)
 git checkout dev
 git push origin dev
-# Wait for TestPyPI workflow to complete (approximately 22 min)
+# Wait for TestPyPI workflow to complete (approximately 35 min)
 
 # Stage 2: Verify TestPyPI success at:
 # https://github.com/YOUR_USERNAME/ASD_File_Reader/actions
@@ -203,9 +229,9 @@ See:
 2. Publishes to TestPyPI
 3. Runs comprehensive verification tests:
    - 3 operating systems: Ubuntu, Windows, macOS
-   - 3 Python versions: 3.8, 3.11, 3.12
-   - 9 total test combinations
-4. Duration: Approximately 22 minutes
+   - 5 Python versions: 3.8, 3.9, 3.10, 3.11, 3.12
+   - 15 total test combinations
+4. Duration: Approximately 35 minutes
 
 **Concurrency**: Automatically cancels outdated runs when new commits are pushed
 
@@ -218,7 +244,7 @@ See:
 **Process**:
 1. **Smart Test Reuse**:
    - Checks if commit was tested on TestPyPI (within 7 days)
-   - Validates test completeness (9/9 jobs passed)
+   - Validates test completeness (15/15 jobs passed)
    - Skips verification if already tested
 
 2. **Build & Publish**:
@@ -246,7 +272,7 @@ See:
 ```bash
 # 1. Push to dev branch and wait for TestPyPI
 git checkout dev
-git push origin dev              # Approximately 22 min (full tests)
+git push origin dev              # Approximately 35 min (full tests)
 # Wait for success...
 
 # 2. Merge to main and create tag
@@ -287,14 +313,14 @@ git push origin dev --tags       # Approximately 45 min (both run full tests in 
 ### Resource Optimization
 
 **GitHub Actions Minutes**:
-- TestPyPI per push: Approximately 22 minutes
+- TestPyPI per push: Approximately 35 minutes
 - PyPI (normal release): Approximately 8 minutes (with test reuse)
-- PyPI (hotfix): Approximately 23 minutes (full tests)
+- PyPI (hotfix): Approximately 35 minutes (full tests)
 
 **Monthly Estimate** (20 dev pushes + 2 releases):
-- TestPyPI: 20 × 22 = 440 min
+- TestPyPI: 20 × 35 = 700 min
 - PyPI: 2 × 8 = 16 min
-- **Total**: Approximately 456 min/month (approximately 23% of free tier 2000 min)
+- **Total**: Approximately 716 min/month (approximately 36% of free tier 2000 min)
 
 **Savings**: Approximately 40% compared to running full tests every time
 
@@ -369,7 +395,7 @@ git tag -d v1.0.0
 git push origin :refs/tags/v1.0.0
 ```
 
-### Problem: Version shows as fallback (1.0.0)
+### Problem: Version shows as fallback (0.0.0)
 
 **Cause:** setuptools_scm not installed or not in Git repository
 
@@ -383,6 +409,9 @@ git status
 
 # Verify tags exist
 git tag -l
+
+# If tags exist, rebuild/reinstall the package
+pip install -e .
 ```
 
 ### Problem: Duplicate tags on same commit
@@ -499,7 +528,9 @@ The script handles:
 - Branch merging (dev -> main)
 - Tag pushing (triggers CI/CD)
 
-**Total time**: ~2 minutes of manual work + ~8 minutes CI/CD
+**Total time**: ~2 minutes of manual work + 5-10 minutes CI/CD (with test reuse)
+
+**Note**: Times vary based on test execution and PyPI availability. Expect longer durations (30-40 min) without test reuse.
 
 See `scripts/release.sh` for details.
 
@@ -510,7 +541,7 @@ See `scripts/release.sh` for details.
 git checkout dev
 git commit -m "feat: New feature"
 git push origin dev
-# Triggers TestPyPI publish + full tests (approximately 22 min)
+# Triggers TestPyPI publish + full tests (approximately 35 min)
 
 # Release workflow (recommended)
 # Step 1: Update CHANGELOG on dev

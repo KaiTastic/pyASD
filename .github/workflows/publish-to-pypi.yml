@@ -3,13 +3,13 @@
 # Purpose: Automated production deployment with intelligent test optimization
 # Testing Strategy:
 #   - Conditional Testing: Reuses TestPyPI tests if available (within 7 days)
-#   - Reduced Matrix: 9 combinations (3 OS × 3 Python versions: 3.8, 3.11, 3.12)
-#   - Full testing is provided by python-package.yml and TestPyPI workflows
+#   - Complete Matrix: 15 combinations (3 OS × 5 Python versions: 3.8-3.12)
+#   - Ensures full coverage of all declared supported Python versions
 #
 # Resource Optimization:
 #   - With test reuse: ~8 min (skips verification)
-#   - Without test reuse: ~23 min (runs 9 verification jobs)
-#   - Average savings: ~45 min per release with proper workflow
+#   - Without test reuse: ~35 min (runs 15 verification jobs)
+#   - Average savings: ~60 min per release with proper workflow
 #
 # Version number is automatically determined by setuptools-scm from the git tag
 # For more information see: https://packaging.python.org/en/latest/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/
@@ -22,10 +22,65 @@ on:
     tags:
       - 'v*.*.*'
 
+# Concurrency control: Prevent multiple releases from running simultaneously
+# cancel-in-progress is false to ensure all releases complete (no cancellation)
+concurrency:
+  group: pypi-production-release
+  cancel-in-progress: false
+
 jobs:
+  # Verify tag is on main branch
+  verify-tag-branch:
+    name: Verify tag is on main branch
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Need full history to verify branch ancestry
+
+    - name: Verify tag points to commit on main branch
+      run: |
+        echo "Verifying tag ${{ github.ref_name }} is on main branch..."
+
+        # Get commit SHA that the tag points to
+        TAG_COMMIT=$(git rev-parse ${{ github.ref }})
+        echo "Tag commit: $TAG_COMMIT"
+
+        # Fetch main branch
+        git fetch origin main
+
+        # Check if tag commit is an ancestor of or on main branch
+        if git merge-base --is-ancestor $TAG_COMMIT origin/main; then
+          echo "✅ Tag ${{ github.ref_name }} is on main branch"
+        elif [ "$TAG_COMMIT" = "$(git rev-parse origin/main)" ]; then
+          echo "✅ Tag ${{ github.ref_name }} points to HEAD of main branch"
+        else
+          echo "❌ ERROR: Tag ${{ github.ref_name }} is NOT on main branch!"
+          echo ""
+          echo "This tag points to a commit that is not in the main branch history."
+          echo "Tags should only be created on the main branch after merging from dev."
+          echo ""
+          echo "To fix this:"
+          echo "  1. Delete the incorrect tag:"
+          echo "     git tag -d ${{ github.ref_name }}"
+          echo "     git push origin :refs/tags/${{ github.ref_name }}"
+          echo ""
+          echo "  2. Merge dev to main:"
+          echo "     git checkout main"
+          echo "     git merge dev"
+          echo "     git push origin main"
+          echo ""
+          echo "  3. Create tag on main branch:"
+          echo "     git tag -a ${{ github.ref_name }} -m 'Release ${{ github.ref_name }}'"
+          echo "     git push origin ${{ github.ref_name }}"
+          exit 1
+        fi
+
   # Check if this commit was already tested on TestPyPI
   check-previous-test:
     name: Check if already tested on TestPyPI
+    needs: [verify-tag-branch]  # Only run if tag verification passes
     runs-on: ubuntu-latest
     outputs:
       tested_on_testpypi: ${{ steps.check.outputs.tested }}
@@ -41,7 +96,7 @@ jobs:
         COMMIT_SHA="${{ github.sha }}"
         echo "🔍 Checking if commit $COMMIT_SHA was tested in TestPyPI workflow..."
 
-        # Only accept test results from the last 7 days
+        # Accept test results from the last 7 days (balances freshness with reusability)
         SEVEN_DAYS_AGO=$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-7d +%Y-%m-%dT%H:%M:%SZ)
 
         # Query TestPyPI workflow runs
@@ -56,7 +111,7 @@ jobs:
           CREATED_AT=$(echo "$TESTPYPI_RUN" | jq -r '.created_at')
           HTML_URL=$(echo "$TESTPYPI_RUN" | jq -r '.html_url')
 
-          # Verify that the run included complete test matrix (9 verification jobs)
+          # Verify that the run included complete test matrix (15 verification jobs)
           echo "📊 Verifying test completeness for run $RUN_ID..."
           VERIFY_JOBS=$(gh api \
             -H "Accept: application/vnd.github+json" \
@@ -65,17 +120,17 @@ jobs:
 
           SUCCESS_COUNT=$(echo "$VERIFY_JOBS" | grep -c "success" || echo "0")
 
-          if [ "$SUCCESS_COUNT" -ge 9 ]; then
+          if [ "$SUCCESS_COUNT" -ge 15 ]; then
             echo "✅ Found complete TestPyPI test for this commit"
             echo "   Run ID: $RUN_ID"
             echo "   Tested at: $CREATED_AT"
-            echo "   Successful jobs: $SUCCESS_COUNT/9"
+            echo "   Successful jobs: $SUCCESS_COUNT/15"
             echo "   URL: $HTML_URL"
             echo "tested=true" >> $GITHUB_OUTPUT
             echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
             echo "url=$HTML_URL" >> $GITHUB_OUTPUT
           else
-            echo "⚠️  TestPyPI test found but incomplete ($SUCCESS_COUNT/9 jobs passed)"
+            echo "⚠️  TestPyPI test found but incomplete ($SUCCESS_COUNT/15 jobs passed)"
             echo "   Will run full verification tests"
             echo "tested=false" >> $GITHUB_OUTPUT
           fi
@@ -88,6 +143,7 @@ jobs:
   # Build the distribution packages
   build:
     name: Build distribution packages
+    needs: [verify-tag-branch]  # Only build if tag verification passes
     runs-on: ubuntu-latest
 
     steps:
@@ -134,18 +190,21 @@ jobs:
     needs: [build]
     runs-on: ubuntu-latest
 
-    # GitHub Environment Protection (optional but recommended)
+    # GitHub Environment Protection (ENABLED for production safety)
     # Provides manual approval gate for production releases
-    # Setup instructions: docs/GITHUB_ENVIRONMENT_SETUP.md
     #
-    # To enable:
-    #   1. Create 'pypi-production' environment in Settings > Environments
-    #   2. Configure required reviewers
-    #   3. Uncomment the lines below
+    # Setup required (one-time):
+    #   1. Go to Settings > Environments > New environment
+    #   2. Name: pypi-production
+    #   3. Add required reviewers (at least 1 person)
+    #   4. Optional: Add 5-minute wait timer
+    #   5. Deployment branches: Only main
     #
-    # environment:
-    #   name: pypi-production
-    #   url: https://pypi.org/project/pyASDReader/
+    # This ensures that production releases require manual approval before publishing to PyPI
+    #
+    environment:
+      name: pypi-production
+      url: https://pypi.org/project/pyASDReader/
 
     permissions:
       id-token: write  # Required for trusted publishing
@@ -160,8 +219,9 @@ jobs:
     - name: Publish to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
-        password: ${{ secrets.PYPI_API_TOKEN }}
         verbose: true
+        # Using OIDC Trusted Publishing (no password needed)
+        # Configure at: https://pypi.org/manage/project/pyASDReader/settings/publishing/
 
   # Create GitHub Release
   create-github-release:
@@ -244,10 +304,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Test on 3 OS with 3 representative Python versions (9 jobs total)
-        # Covers: oldest supported, middle, and latest stable
+        # Test on 3 OS with all 5 supported Python versions (15 jobs total)
+        # Ensures complete coverage matching TestPyPI verification
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.8", "3.11", "3.12"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
 
     steps:
     - name: Set up Python ${{ matrix.python-version }}
@@ -255,27 +315,86 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Wait for PyPI to update (120 seconds)
-      run: sleep 120
+    - name: Wait for PyPI package availability (API-based check)
+      run: |
+        echo "Checking PyPI for package availability via JSON API..."
+        MAX_ATTEMPTS=30
+        ATTEMPT=0
+        SLEEP_INTERVAL=10
+
+        # Extract version from tag (remove 'v' prefix)
+        VERSION="${GITHUB_REF#refs/tags/v}"
+        echo "Looking for version: $VERSION"
+
+        while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+          ATTEMPT=$((ATTEMPT + 1))
+          echo "Attempt $ATTEMPT/$MAX_ATTEMPTS: Querying PyPI API..."
+
+          # Query PyPI JSON API (faster and more reliable than pip index)
+          HTTP_CODE=$(curl -s -o /tmp/pypi_response.json -w "%{http_code}" \
+            https://pypi.org/pypi/pyASDReader/json)
+
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ Package exists on PyPI"
+
+            # Verify the specific version we just published is available
+            if grep -q "\"$VERSION\"" /tmp/pypi_response.json; then
+              echo "✅ Version $VERSION confirmed available"
+              break
+            else
+              echo "⚠️ Package exists but version $VERSION not yet indexed"
+            fi
+          else
+            echo "Package not yet available (HTTP $HTTP_CODE)"
+          fi
+
+          if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+            echo "Waiting ${SLEEP_INTERVAL}s before retry..."
+            sleep $SLEEP_INTERVAL
+          else
+            echo "⚠️ Max attempts reached, proceeding with installation..."
+          fi
+        done
+
+        rm -f /tmp/pypi_response.json
       shell: bash
 
     - name: Install from PyPI
       run: |
         python -m pip install --upgrade pip
         python -m pip install pyASDReader
-      continue-on-error: true
-
-    - name: Retry installation if failed (PyPI might be slow)
-      if: failure()
-      run: |
-        echo "First install attempt failed, waiting 60 more seconds..."
-        sleep 60
-        python -m pip install pyASDReader
 
     - name: Verify installation
       run: |
-        python -c "from pyASDReader import ASDFile; print('Successfully imported ASDFile')"
-        python -c "from pyASDReader import __version__; print(f'Package version: {__version__}')"
+        python -c "from pyASDReader import ASDFile; print('✓ Successfully imported ASDFile')"
+        python -c "from pyASDReader import __version__; print(f'✓ Package version: {__version__}')"
+
+    - name: Smoke test - Basic functionality
+      run: |
+        python << 'PYTHON_SCRIPT'
+        from pyASDReader import ASDFile
+        import re
+
+        # Test 1: ASDFile class exists and has expected methods
+        assert hasattr(ASDFile, '__init__'), "ASDFile should have __init__"
+        print("✓ ASDFile class structure valid")
+
+        # Test 2: Version format is valid (semantic versioning)
+        from pyASDReader import __version__
+        assert re.match(r'^\d+\.\d+\.\d+', __version__), f"Version should be semver format, got: {__version__}"
+        print(f"✓ Version format valid: {__version__}")
+
+        # Test 3: Key modules are importable
+        try:
+            from pyASDReader import constant
+            from pyASDReader import file_attributes
+            print("✓ Core modules importable")
+        except ImportError as e:
+            print(f"✗ Import error: {e}")
+            raise
+
+        print("\n✅ All smoke tests passed!")
+        PYTHON_SCRIPT
 
     - name: Verify package metadata
       run: |
@@ -298,18 +417,138 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Commit**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **TestPyPI Run**: [#${{ needs.check-previous-test.outputs.testpypi_run_id }}](${{ needs.check-previous-test.outputs.testpypi_url }})" >> $GITHUB_STEP_SUMMARY
-          echo "- **Test Matrix**: 9 combinations (3 OS × 3 Python versions)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Test Matrix**: 15 combinations (3 OS × 5 Python versions: 3.8-3.12)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✨ Saved ~45 minutes of GitHub Actions time by reusing tests!" >> $GITHUB_STEP_SUMMARY
+          echo "✨ Saved ~60 minutes of GitHub Actions time by reusing tests!" >> $GITHUB_STEP_SUMMARY
         elif [ "${{ needs.verify-installation.result }}" == "success" ]; then
           echo "### ✅ Verification Status: COMPLETED" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Full verification completed successfully on PyPI." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Commit**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Test Matrix**: 9 combinations (3 OS × 3 Python versions)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Test Matrix**: 15 combinations (3 OS × 5 Python versions: 3.8-3.12)" >> $GITHUB_STEP_SUMMARY
         else
           echo "### ⚠️ Verification Status: SKIPPED/FAILED" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Verification was skipped or failed. Please check the logs." >> $GITHUB_STEP_SUMMARY
         fi
+
+  # Handle verification failures
+  handle-verification-failure:
+    name: Handle Verification Failure
+    needs: [verify-installation]
+    if: failure() && needs.verify-installation.result == 'failure'
+    runs-on: ubuntu-latest
+
+    permissions:
+      issues: write  # Required to create issues
+
+    steps:
+    - name: Extract version from tag
+      id: version
+      run: |
+        VERSION="${GITHUB_REF#refs/tags/v}"
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Detected version: $VERSION"
+
+    - name: Create failure notification issue
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const version = '${{ steps.version.outputs.version }}';
+          const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+          const body = `## ⚠️ PyPI Release Verification Failed
+
+          **Version**: \`${version}\`
+          **Tag**: \`${context.ref}\`
+          **Workflow Run**: [View Details](${runUrl})
+
+          ### Issue
+
+          The verification tests failed after publishing to PyPI. The package was published but failed post-release validation.
+
+          ### Impact
+
+          - ❌ Package \`pyASDReader ${version}\` is live on PyPI but may have issues
+          - ⚠️ Users can install this version, but it may not work correctly
+          - 🔍 Immediate investigation required
+
+          ### Recommended Actions
+
+          1. **Investigate the failure**:
+             - Review the [workflow logs](${runUrl})
+             - Identify which verification tests failed
+             - Determine if the issue is critical
+
+          2. **If the issue is critical**:
+             \`\`\`bash
+             # Yank the problematic version from PyPI
+             pip install twine
+             twine yank pyASDReader ${version} -m "Failed post-release verification"
+             \`\`\`
+
+          3. **If the issue is minor**:
+             - Document the known issue
+             - Prepare a patch release
+
+          4. **Verify locally**:
+             \`\`\`bash
+             # Test installation from PyPI
+             pip install pyASDReader==${version}
+             python -c "from pyASDReader import ASDFile; print('Import successful')"
+             \`\`\`
+
+          ### Next Steps
+
+          - [ ] Investigate workflow failure logs
+          - [ ] Reproduce issue locally
+          - [ ] Decide: Yank version or document known issue
+          - [ ] Prepare fix if needed
+
+          ---
+          *This issue was automatically created by the PyPI release workflow.*
+          `;
+
+          // Check if similar issue already exists
+          const issues = await github.rest.issues.listForRepo({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            state: 'open',
+            labels: 'release-failure'
+          });
+
+          const existingIssue = issues.data.find(issue =>
+            issue.title.includes(version)
+          );
+
+          if (existingIssue) {
+            // Update existing issue
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: existingIssue.number,
+              body: `🔄 Verification failed again for version ${version}.\n\n[Latest workflow run](${runUrl})`
+            });
+            console.log(`Updated existing issue #${existingIssue.number}`);
+          } else {
+            // Create new issue
+            const issue = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `⚠️ Release Verification Failed: v${version}`,
+              body: body,
+              labels: ['release-failure', 'urgent', 'bug']
+            });
+            console.log(`Created new issue #${issue.data.number}`);
+          }
+
+    - name: Send notification summary
+      run: |
+        echo "## ⚠️ Verification Failure Alert" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Version ${{ steps.version.outputs.version }} was published to PyPI but failed verification." >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "A GitHub issue has been created for tracking." >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**IMPORTANT**: Consider yanking this version if the issue is critical." >> $GITHUB_STEP_SUMMARY

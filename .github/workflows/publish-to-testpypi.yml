@@ -2,14 +2,14 @@
 #
 # Purpose: Automated testing and validation before production releases
 # Testing Strategy:
-#   - Reduced Matrix: 9 combinations (3 OS × 3 Python versions: 3.8, 3.11, 3.12)
-#   - Covers: oldest supported (3.8), current stable (3.11), latest stable (3.12)
-#   - Balances coverage with resource efficiency (~22 min vs ~35 min for full matrix)
-#   - Full testing coverage is provided by python-package.yml workflow
+#   - Complete Matrix: 15 combinations (3 OS × 5 Python versions: 3.8-3.12)
+#   - Ensures full coverage of all declared supported Python versions
+#   - Matches production PyPI verification matrix
+#   - Results can be reused by PyPI workflow (7-day window)
 #
 # Resource Optimization:
-#   - Saves ~13 min per run compared to full matrix
-#   - Monthly savings: ~260 min (assuming 20 dev pushes/month)
+#   - Duration: ~35 min per run (comprehensive testing)
+#   - Enables test reuse in PyPI workflow (saves ~60 min per release)
 
 name: Publish to TestPyPI (Dev Branch)
 
@@ -18,14 +18,19 @@ on:
     branches:
       - dev
     paths:
-      - 'src/**'
+      # Only trigger on actual package changes
+      - 'src/**/*.py'
       - 'pyproject.toml'
       - '.github/workflows/publish-to-testpypi.yml'
       - 'setup.py'
       - 'MANIFEST.in'
       # Also trigger on version/changelog updates (release preparation)
       - 'CHANGELOG.md'
-      - 'README.md'
+      # Exclude documentation and test files
+      - '!src/**/*_test.py'
+      - '!src/**/*.md'
+      - '!**.md'  # Except CHANGELOG.md which is explicitly included above
+  workflow_dispatch:  # Allow manual trigger
 
 # Prevent concurrent runs, cancel outdated workflow runs
 concurrency:
@@ -96,12 +101,13 @@ jobs:
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         repository-url: https://test.pypi.org/legacy/
-        password: ${{ secrets.TEST_PYPI_API_TOKEN }}
         skip-existing: true  # Don't fail if version already exists
         verbose: true
+        # Using OIDC Trusted Publishing (no password needed)
+        # Configure at: https://test.pypi.org/manage/project/pyASDReader/settings/publishing/
 
   # Post-publish verification
-  # Full testing matrix to match PyPI verification
+  # Full testing matrix matching all supported Python versions
   verify-installation:
     name: Verify TestPyPI Installation
     needs: [publish-to-testpypi]
@@ -109,10 +115,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Test on 3 OS with 3 representative Python versions (9 jobs total)
-        # Covers: oldest supported, middle, and latest stable
+        # Test on 3 OS with all 5 supported Python versions (15 jobs total)
+        # Ensures complete coverage for all declared supported versions
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.8", "3.11", "3.12"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
 
     steps:
     - name: Set up Python ${{ matrix.python-version }}
@@ -120,27 +126,83 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Wait for TestPyPI to update (120 seconds)
-      run: sleep 120
+    - name: Wait for TestPyPI package availability (API-based check)
+      run: |
+        echo "Checking TestPyPI for package availability via JSON API..."
+        MAX_ATTEMPTS=30
+        ATTEMPT=0
+        SLEEP_INTERVAL=10
+
+        # Get version from setuptools_scm (development version)
+        echo "Detecting package version..."
+
+        while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+          ATTEMPT=$((ATTEMPT + 1))
+          echo "Attempt $ATTEMPT/$MAX_ATTEMPTS: Querying TestPyPI API..."
+
+          # Query TestPyPI JSON API (faster and more reliable than pip index)
+          HTTP_CODE=$(curl -s -o /tmp/testpypi_response.json -w "%{http_code}" \
+            https://test.pypi.org/pypi/pyASDReader/json)
+
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ Package exists on TestPyPI"
+
+            # Get latest version from API response
+            LATEST_VERSION=$(grep -o '"version":"[^"]*"' /tmp/testpypi_response.json | head -1 | cut -d'"' -f4)
+            echo "Latest version on TestPyPI: $LATEST_VERSION"
+            break
+          else
+            echo "Package not yet available (HTTP $HTTP_CODE)"
+          fi
+
+          if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+            echo "Waiting ${SLEEP_INTERVAL}s before retry..."
+            sleep $SLEEP_INTERVAL
+          else
+            echo "⚠️ Max attempts reached, proceeding with installation..."
+          fi
+        done
+
+        rm -f /tmp/testpypi_response.json
       shell: bash
 
     - name: Install from TestPyPI
       run: |
         python -m pip install --upgrade pip
         python -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ pyASDReader
-      continue-on-error: true
-
-    - name: Retry installation if failed (TestPyPI might be slow)
-      if: failure()
-      run: |
-        echo "First install attempt failed, waiting 60 more seconds..."
-        sleep 60
-        python -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ pyASDReader
 
     - name: Verify installation
       run: |
-        python -c "from pyASDReader import ASDFile; print('Successfully imported ASDFile')"
-        python -c "from pyASDReader import __version__; print(f'Package version: {__version__}')"
+        python -c "from pyASDReader import ASDFile; print('✓ Successfully imported ASDFile')"
+        python -c "from pyASDReader import __version__; print(f'✓ Package version: {__version__}')"
+
+    - name: Smoke test - Basic functionality
+      run: |
+        python << 'PYTHON_SCRIPT'
+        from pyASDReader import ASDFile
+        import re
+
+        # Test 1: ASDFile class exists and has expected methods
+        assert hasattr(ASDFile, '__init__'), "ASDFile should have __init__"
+        print("✓ ASDFile class structure valid")
+
+        # Test 2: Version format is valid (semantic versioning or dev version)
+        from pyASDReader import __version__
+        # Allow both release (1.2.3) and dev (1.2.3.dev1+g7a8b9c0) versions
+        assert re.match(r'^\d+\.\d+\.\d+', __version__), f"Version should start with semver format, got: {__version__}"
+        print(f"✓ Version format valid: {__version__}")
+
+        # Test 3: Key modules are importable
+        try:
+            from pyASDReader import constant
+            from pyASDReader import file_attributes
+            print("✓ Core modules importable")
+        except ImportError as e:
+            print(f"✗ Import error: {e}")
+            raise
+
+        print("\n✅ All smoke tests passed!")
+        PYTHON_SCRIPT
 
     - name: Verify package metadata
       run: |

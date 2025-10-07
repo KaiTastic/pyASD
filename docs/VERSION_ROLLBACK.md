@@ -1,376 +1,294 @@
 # Version Rollback and Emergency Procedures
 
-This document describes how to rollback a release in case of critical issues discovered after deployment.
-
-## Table of Contents
-
-- [When to Rollback](#when-to-rollback)
-- [Quick Rollback Procedure](#quick-rollback-procedure)
-- [Detailed Rollback Steps](#detailed-rollback-steps)
-- [Post-Rollback Actions](#post-rollback-actions)
-- [Prevention Strategies](#prevention-strategies)
+Quick guide for rolling back problematic releases.
 
 ## When to Rollback
 
-Consider rolling back when:
-- **Critical bug** discovered in production that breaks core functionality
-- **Security vulnerability** identified
-- **Data corruption** or loss issues
-- **Major compatibility** problems affecting users
-- **Installation failures** on PyPI preventing users from installing
+**Rollback for**:
+- Critical bugs breaking core functionality
+- Security vulnerabilities
+- Data corruption issues
+- Major compatibility problems
+- Installation failures preventing user access
 
-**DO NOT rollback for**:
-- Minor bugs that don't affect core functionality
-- Documentation errors (fix with patch release)
-- Performance issues (fix with patch release)
+**DON'T rollback for**:
+- Minor bugs → Fix with patch release
+- Documentation errors → Update docs
+- Performance issues → Optimize in next release
 
-## Quick Rollback Procedure
+## Quick Rollback (10-15 minutes)
 
-For urgent situations, use this abbreviated process:
+### Option A: Yank Release (Recommended)
+
+PyPI's yank feature is preferred over deletion:
 
 ```bash
-# 1. Identify the last good version
-LAST_GOOD_VERSION="v1.2.2"  # Example
-
-# 2. Remove problematic version from PyPI (cannot be undone!)
+# 1. Yank the bad version on PyPI
 # Go to: https://pypi.org/manage/project/pyASDReader/releases/
-# Click on the problematic version -> "Options" -> "Delete"
+# Click problematic version → "Options" → "Yank release"
+# Reason: "Critical bug: <description>"
 
-# 3. Tag and release the last good version as a new version
+# 2. Release hotfix immediately
 git checkout main
-git checkout $LAST_GOOD_VERSION
-git tag -a v1.2.4 -m "Rollback to $LAST_GOOD_VERSION due to critical issue"
-git push origin v1.2.4
+# Apply fix
+git commit -m "fix: Critical bug from v1.2.3"
+git tag -a v1.2.4 -m "Hotfix: Fixes critical issue in v1.2.3"
+git push origin main v1.2.4
 
-# 4. Update CHANGELOG and push
-# (See detailed steps below)
+# 3. Update CHANGELOG
+# Document the issue and fix in v1.2.4
+
+# 4. Back-merge to dev
+git checkout dev && git merge main && git push origin dev
 ```
 
-**Timeline**: Can be completed in 10-15 minutes.
+**Why yank?**
+- Version remains visible but pip won't install it
+- Preserves version history
+- Users see warning about yanked version
+- Can still install with `pip install pyASDReader==1.2.3 --force-reinstall`
+
+### Option B: Republish Last Good Version
+
+If yank isn't sufficient (extremely rare):
+
+```bash
+# 1. Delete bad version from PyPI (IRREVERSIBLE)
+# Go to: https://pypi.org/manage/project/pyASDReader/releases/
+# Click version → "Options" → "Delete"
+
+# 2. Checkout last good version
+git checkout v1.2.2  # Last known good
+
+# 3. Create new version tag (can't reuse numbers)
+git tag -a v1.2.4 -m "Rollback: Restores v1.2.2 code
+
+Critical issues in v1.2.3:
+- [List issues]
+
+Version 1.2.3 has been removed from PyPI."
+
+# 4. Push tag (triggers release)
+git push origin v1.2.4
+```
+
+**Note**: Version numbers must increase, can't republish v1.2.2.
 
 ## Detailed Rollback Steps
 
-### Step 1: Assess the Situation
-
-1. **Identify the problematic version**
-   ```bash
-   # Current version on PyPI
-   pip index versions pyASDReader
-
-   # Recent git tags
-   git tag -l --sort=-version:refname | head -5
-   ```
-
-2. **Identify the last known good version**
-   ```bash
-   # Check commit history
-   git log --oneline --decorate
-
-   # Verify the last good tag
-   LAST_GOOD_VERSION="v1.2.2"
-   git show $LAST_GOOD_VERSION
-   ```
-
-3. **Document the issue**
-   - Create GitHub issue describing the problem
-   - Tag as "critical" and "bug"
-   - Include: affected versions, reproduction steps, impact
-
-### Step 2: Remove Bad Version from PyPI
-
-**WARNING**: PyPI does not allow re-uploading the same version number. Once deleted, that version number is permanently lost.
-
-1. **Go to PyPI project management**
-   - URL: https://pypi.org/manage/project/pyASDReader/releases/
-
-2. **Delete the problematic version**
-   - Click on the version (e.g., "1.2.3")
-   - Click "Options" → "Delete"
-   - Confirm deletion
-
-3. **Verify deletion**
-   ```bash
-   pip index versions pyASDReader
-   # The deleted version should not appear
-   ```
-
-**Alternative**: If users can be warned not to use the version, you may leave it and release a fixed version instead.
-
-### Step 3: Prepare Rollback Release
-
-1. **Checkout the last good version**
-   ```bash
-   git checkout main
-   git pull origin main
-   git checkout $LAST_GOOD_VERSION
-   ```
-
-2. **Determine new version number**
-
-   Since PyPI versions cannot be reused:
-   - If rolling back from `v1.2.3` to `v1.2.2`, release as `v1.2.4`
-   - The new version re-publishes the last good code with a new version number
-
-3. **Update CHANGELOG.md**
-
-   ```bash
-   # Switch to dev branch to update CHANGELOG
-   git checkout dev
-   git pull origin dev
-
-   # Edit CHANGELOG.md
-   ```
-
-   Add entry:
-   ```markdown
-   ## [1.2.4] - 2025-10-07
-
-   ### Fixed
-   - **ROLLBACK**: Reverted to v1.2.2 due to critical bug in v1.2.3
-   - Issue: [Brief description of the problem]
-   - Affects: [Affected functionality]
-   - Resolution: [How the issue will be properly fixed]
-
-   ### Note
-   Version 1.2.3 has been removed from PyPI due to [critical issue].
-   This release restores the stable v1.2.2 codebase.
-   ```
-
-4. **Commit CHANGELOG update**
-   ```bash
-   git add CHANGELOG.md
-   git commit -m "docs: Document v1.2.4 rollback release"
-   ```
-
-### Step 4: Create Rollback Release
-
-#### Option A: Using Automated Script (Recommended)
+### Step 1: Assess and Document
 
 ```bash
-# 1. Merge CHANGELOG to main
-git checkout main
-git merge dev
-git push origin main
+# Identify problematic version
+pip index versions pyASDReader
 
-# 2. Create tag from last good version
-git checkout v1.2.2
-git tag -a v1.2.4 -m "Rollback release: restores v1.2.2 code
+# Find last good version
+git tag -l --sort=-version:refname | head -5
+git show v1.2.2  # Verify it's stable
 
-This is a rollback release due to critical issues in v1.2.3.
-
-Issues fixed by rollback:
-- [List critical issues]
-
-Version 1.2.3 has been removed from PyPI.
-
-This release restores the stable v1.2.2 codebase while maintaining
-version progression (cannot reuse v1.2.2 on PyPI)."
-
-# 3. Push tag (triggers CI/CD)
-git push origin v1.2.4
+# Create GitHub issue
+# Title: "Critical: Version 1.2.3 has breaking bug"
+# Labels: critical, bug
+# Description: Impact, reproduction steps, affected users
 ```
 
-#### Option B: Manual Release
+### Step 2: Immediate User Communication
 
+Post announcement immediately:
+
+```markdown
+## Critical: Version 1.2.3 Issue
+
+**Action Required**: Do NOT use v1.2.3
+
+**Issue**: [Brief description]
+
+**Affected**: [Who is affected]
+
+**Status**:
+- ❌ v1.2.3 has been yanked from PyPI
+- ✅ v1.2.4 hotfix in progress (ETA: X hours)
+- ✅ v1.2.2 is stable, use as workaround
+
+**Workaround**:
 ```bash
-# 1. Checkout last good version
-git checkout v1.2.2
-
-# 2. Build package
-python -m build
-
-# 3. Upload to PyPI
-python -m twine upload dist/*
-
-# 4. Create GitHub release manually
-# Go to: https://github.com/KaiTastic/pyASDReader/releases/new
-# Tag: v1.2.4
-# Title: "v1.2.4 - Rollback Release"
-# Description: [Include rollback details]
+pip install pyASDReader==1.2.2
 ```
 
-### Step 5: Verify Rollback
+**Update**: [Timestamp] - Status updates posted here
+```
+
+Post to:
+- GitHub Discussions
+- GitHub Issues
+- README.md (temporary warning banner)
+
+### Step 3: Execute Rollback
+
+Choose appropriate method from Quick Rollback section above.
+
+### Step 4: Verify
 
 ```bash
-# 1. Wait for PyPI to update (2-5 minutes)
-
-# 2. Test installation in clean environment
+# Test installation
 python -m venv test_env
 source test_env/bin/activate
 pip install pyASDReader
 
-# 3. Verify version
+# Verify correct version
 python -c "from pyASDReader import __version__; print(__version__)"
-# Should show: 1.2.4
+# Should show 1.2.4 or 1.2.2
 
-# 4. Run smoke tests
-python -c "from pyASDReader import ASDFile; print('Import successful')"
-```
+# Run smoke tests
+python -c "from pyASDReader import ASDFile; print('OK')"
 
-### Step 6: Sync Branches
-
-```bash
-# 1. Update main branch
-git checkout main
-git merge v1.2.4
-
-# 2. Sync dev branch
-git checkout dev
-git merge main
-git push origin dev
+# Clean up
+deactivate && rm -rf test_env
 ```
 
 ## Post-Rollback Actions
 
-### Immediate (Within 24 hours)
+### Immediate (24 hours)
 
-1. **Notify users**
-   - Create GitHub release announcement
-   - Update README.md with warning (if needed)
-   - Post to discussions/community channels
+1. **Update documentation**
+   ```bash
+   # Update CHANGELOG.md
+   vim CHANGELOG.md
+   ```
 
-   Example announcement:
+   Add:
    ```markdown
-   ## Important: Version 1.2.3 Rollback
+   ## [1.2.4] - YYYY-MM-DD
 
-   **Action Required**: If you installed v1.2.3, please upgrade to v1.2.4
+   ### Fixed
+   - **CRITICAL**: Fixed [issue] from v1.2.3
+   - v1.2.3 has been yanked from PyPI
 
-   Version 1.2.3 contained [critical issue] and has been removed from PyPI.
-   Version 1.2.4 restores the stable v1.2.2 codebase.
-
-   Upgrade command:
+   ### Note
+   If you installed v1.2.3, upgrade immediately:
    ```bash
    pip install --upgrade pyASDReader
    ```
-
-   We apologize for the inconvenience. A proper fix is being developed.
    ```
 
-2. **Monitor installations**
-   - Check PyPI download statistics
-   - Watch for related bug reports
+2. **Monitor and support users**
+   - Watch GitHub issues for related reports
+   - Respond to user questions quickly
+   - Track who might be affected
 
-3. **Create fix plan**
-   - Open GitHub issue for proper fix
-   - Assign developers
-   - Set target release date
+3. **Root cause analysis**
+   - Why did the bug slip through?
+   - Were tests insufficient?
+   - Was review process adequate?
 
-### Short-term (Within 1 week)
+### Short-term (1 week)
 
-1. **Root cause analysis**
-   - Document what went wrong
-   - Identify gaps in testing
-   - Update test cases
-
-2. **Implement proper fix**
-   - Create fix branch
-   - Add regression tests
-   - Thorough code review
-
-3. **Enhanced testing**
-   - Run on multiple platforms
-   - Test with various Python versions
-   - Consider beta testing with volunteers
-
-4. **Release fixed version** (e.g., v1.2.5)
+1. **Improve testing**
    ```bash
-   # After fix is ready and tested
-   git checkout dev
-   # ... make fixes ...
-   bash scripts/release.sh patch
+   # Add regression test
+   vim tests/test_regression_v123.py
    ```
 
-### Long-term
+   Ensure bug can't reoccur.
 
-1. **Update processes**
-   - Add checks to prevent similar issues
-   - Enhance CI/CD tests
-   - Improve review process
+2. **Update CI/CD if needed**
+   - Add missing test coverage
+   - Improve validation checks
+   - Enhance review process
 
-2. **Document lessons learned**
-   - Add to project documentation
-   - Share with team
-   - Update testing guidelines
+3. **Document lessons learned**
+   ```bash
+   # Add to project documentation
+   vim docs/POST_MORTEM_v123.md
+   ```
 
 ## Prevention Strategies
 
 ### Before Releasing
 
-1. **Comprehensive testing**
+1. **Always test on TestPyPI first**
    ```bash
-   # Run full test suite
-   pytest tests/ -v
-
-   # Test on multiple Python versions
-   tox
-
-   # Test installation from TestPyPI
-   pip install --index-url https://test.pypi.org/simple/ pyASDReader
+   # Push to dev triggers TestPyPI
+   git push origin dev
+   # Wait for success, then release
    ```
 
-2. **Code review**
-   - At least one other developer reviews
-   - Focus on critical paths
-   - Check for breaking changes
+2. **Use release script validation**
+   ```bash
+   bash scripts/release.sh minor --dry-run
+   python scripts/validate_release.py --run-tests
+   ```
 
-3. **TestPyPI validation**
-   - Always publish to TestPyPI first
-   - Test in clean environment
-   - Wait 24-48 hours before PyPI
+3. **Manual testing checklist**
+   - [ ] Install from TestPyPI in clean environment
+   - [ ] Run full test suite locally
+   - [ ] Test basic import and functionality
+   - [ ] Check all dependencies install correctly
+   - [ ] Verify on multiple Python versions
 
-4. **Gradual rollout** (for major changes)
-   - Beta/RC releases
-   - Community testing
-   - Monitor early adopters
+4. **Code review**
+   - At least one reviewer for significant changes
+   - Focus on breaking changes
+   - Check deprecation warnings
 
-### Monitoring After Release
+### After Releasing
 
-1. **Watch for issues**
-   - Monitor GitHub issues (first 48 hours critical)
+1. **Monitor for 48 hours**
+   - Watch GitHub issues (set up notifications)
    - Check PyPI download errors
-   - Review user feedback
+   - Monitor user feedback channels
 
 2. **Quick response plan**
-   - Have rollback procedure ready
-   - Team available for 24-48 hours
-   - Clear communication channels
+   - Team member available for emergencies
+   - Rollback procedure documentation ready
+   - Communication templates prepared
 
-3. **Usage analytics**
-   - Track download counts
-   - Monitor error reports
-   - Watch for unusual patterns
+3. **Gradual rollout for major changes**
+   - Beta releases for testing
+   - Pre-release tags (v2.0.0-beta.1)
+   - Community testing period
 
 ## Emergency Contacts
 
-- **Project Maintainer**: caokai_cgs@163.com
+- **Maintainer**: caokai_cgs@163.com
 - **GitHub Issues**: https://github.com/KaiTastic/pyASDReader/issues
 - **PyPI Support**: https://pypi.org/help/
 
-## Additional Resources
-
-- [PyPI Package Management](https://pypi.org/manage/project/pyASDReader/)
-- [GitHub Releases](https://github.com/KaiTastic/pyASDReader/releases)
-- [VERSION_MANAGEMENT.md](../VERSION_MANAGEMENT.md)
-- [CONTRIBUTING.md](../CONTRIBUTING.md)
-
 ## Rollback Checklist
-
-Use this checklist during an emergency rollback:
 
 - [ ] Issue documented in GitHub
 - [ ] Last good version identified
-- [ ] Stakeholders notified
-- [ ] Bad version deleted from PyPI (if necessary)
-- [ ] CHANGELOG.md updated
-- [ ] New version tag created
-- [ ] Release verified on PyPI
-- [ ] Installation tested
 - [ ] User announcement posted
-- [ ] Fix plan created
+- [ ] Bad version yanked/deleted on PyPI
+- [ ] Hotfix or rollback tag created
+- [ ] Release verified on PyPI
+- [ ] Installation tested in clean environment
+- [ ] CHANGELOG updated
+- [ ] Dev branch synced
 - [ ] Post-mortem scheduled
-- [ ] Documentation updated
+- [ ] Prevention measures identified
+
+## Additional Resources
+
+- [VERSION_MANAGEMENT.md](../VERSION_MANAGEMENT.md) - Normal release workflow
+- [RELEASE_EXAMPLES.md](RELEASE_EXAMPLES.md) - Release scenarios
+- [PyPI Package Management](https://pypi.org/manage/project/pyASDReader/)
+- [GitHub Releases](https://github.com/KaiTastic/pyASDReader/releases)
+
+## Key Differences: Yank vs Delete
+
+| Action | Yank | Delete |
+|--------|------|--------|
+| **Visibility** | Visible with warning | Completely gone |
+| **Can reinstall** | Yes (with flag) | No (404 error) |
+| **Reversible** | Yes | No (permanent) |
+| **Version number** | Preserved | Lost forever |
+| **pip behavior** | Skips by default | Not found |
+| **Best for** | Most situations | Extreme cases only |
+
+**Recommendation**: Always yank first. Only delete if absolutely necessary (e.g., security issue with exposed credentials).
 
 ---
 
 **Last Updated**: 2025-10-07
-**Version**: 1.0
+**Version**: 2.0 (Streamlined)

@@ -1,0 +1,173 @@
+# Notification Workflow for Deployment Approvals
+#
+# Sends immediate notifications when manual approval is needed
+# Supports: Slack, Email, GitHub Issues
+
+name: Notify Approval Needed
+
+on:
+  workflow_run:
+    workflows: ["Publish to PyPI (Production Release)"]
+    types:
+      - requested  # Triggered when deployment waits for approval
+
+jobs:
+  notify:
+    name: Send approval notification
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Get workflow run details
+      id: workflow
+      run: |
+        VERSION="${{ github.event.workflow_run.head_branch }}"
+        RUN_URL="${{ github.event.workflow_run.html_url }}"
+
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "run_url=$RUN_URL" >> $GITHUB_OUTPUT
+
+    # Option 1: Slack Notification (Recommended)
+    - name: Send Slack notification
+      if: false  # Enable by changing to: if: true
+      uses: slackapi/slack-github-action@v1
+      with:
+        webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+        payload: |
+          {
+            "text": "🚀 PyPI Release Approval Needed",
+            "blocks": [
+              {
+                "type": "header",
+                "text": {
+                  "type": "plain_text",
+                  "text": "🚀 PyPI Release Awaiting Approval"
+                }
+              },
+              {
+                "type": "section",
+                "fields": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Version:*\n${{ steps.workflow.outputs.version }}"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Repository:*\npyASDReader"
+                  }
+                ]
+              },
+              {
+                "type": "actions",
+                "elements": [
+                  {
+                    "type": "button",
+                    "text": {
+                      "type": "plain_text",
+                      "text": "Review Deployment"
+                    },
+                    "url": "${{ steps.workflow.outputs.run_url }}"
+                  }
+                ]
+              }
+            ]
+          }
+
+    # Option 2: Email Notification
+    - name: Send email notification
+      if: false  # Enable by changing to: if: true
+      uses: dawidd6/action-send-mail@v3
+      with:
+        server_address: smtp.gmail.com
+        server_port: 465
+        username: ${{ secrets.EMAIL_USERNAME }}
+        password: ${{ secrets.EMAIL_PASSWORD }}
+        subject: "🚀 PyPI Release Approval Needed: ${{ steps.workflow.outputs.version }}"
+        to: your-email@example.com
+        from: GitHub Actions
+        body: |
+          PyPI Release Approval Required
+
+          Version: ${{ steps.workflow.outputs.version }}
+          Repository: pyASDReader
+
+          Action Required: Review and approve deployment
+
+          Review deployment at:
+          ${{ steps.workflow.outputs.run_url }}
+
+    # Option 3: Create GitHub Issue (Minimal setup)
+    - name: Create approval issue
+      if: true  # Default enabled
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const version = '${{ steps.workflow.outputs.version }}';
+          const runUrl = '${{ steps.workflow.outputs.run_url }}';
+
+          // Check if approval issue already exists for this version
+          const issues = await github.rest.issues.listForRepo({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            state: 'open',
+            labels: 'release-approval'
+          });
+
+          const existingIssue = issues.data.find(issue =>
+            issue.title.includes(version)
+          );
+
+          if (!existingIssue) {
+            const issue = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🚀 Release Approval Needed: ${version}`,
+              body: `## PyPI Release Approval Required
+
+              **Version**: \`${version}\`
+
+              **Action**: Please review and approve the deployment
+
+              **Steps**:
+              1. Visit the [workflow run](${runUrl})
+              2. Click "Review deployments"
+              3. Select "Approve and deploy" or "Reject"
+
+              **Note**: This issue will be automatically closed after approval or rejection.
+              `,
+              labels: ['release-approval', 'urgent'],
+              assignees: ['YOUR_GITHUB_USERNAME']  # Change to your username
+            });
+
+            console.log(\`Created issue #\${issue.data.number}\`);
+          } else {
+            console.log(\`Issue already exists: #\${existingIssue.number}\`);
+          }
+
+    # Close approval issue when deployment completes
+    - name: Close approval issue on completion
+      if: github.event.workflow_run.conclusion != 'waiting'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const issues = await github.rest.issues.listForRepo({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            state: 'open',
+            labels: 'release-approval'
+          });
+
+          for (const issue of issues.data) {
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              state: 'closed'
+            });
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: '✅ Deployment completed. Closing approval issue.'
+            });
+          }
