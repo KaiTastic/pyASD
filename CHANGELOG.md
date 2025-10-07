@@ -228,7 +228,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - ✨ Automatic version management using setuptools-scm
 - 🤖 Dual GitHub Actions workflows: dev branch → TestPyPI, tag → PyPI
 - 📚 Comprehensive documentation for version management and publishing
-- 📝 CLAUDE.md - Guide for Claude Code integration
 - 📝 VERSION_MANAGEMENT.md - Complete guide for version management with Git tags and setuptools_scm
 - 📝 SECURITY.md - Security policy and vulnerability reporting guidelines
 - 📝 PROJECT_IMPROVEMENT_ANALYSIS.md - Detailed analysis of 26 issues

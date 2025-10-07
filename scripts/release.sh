@@ -442,7 +442,6 @@ TAG_MESSAGE="Release v$NEW_VERSION
 
 $(awk "/## \[$NEW_VERSION\]/,/## \[/" CHANGELOG.md | grep -v "^## \[$NEW_VERSION\]" | grep -v "^## \[" | head -20)
 
-Generated with [Claude Code](https://claude.com/claude-code)"
 
 git tag -a "v$NEW_VERSION" -m "$TAG_MESSAGE"
 print_success "Created tag v$NEW_VERSION"
