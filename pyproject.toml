@@ -30,46 +30,49 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "numpy>=1.20.0",
+    "numpy>=1.20.0,<3.0.0",  # Upper bound: avoid breaking changes in numpy 3.x
 ]
 
 [project.optional-dependencies]
 dev = [
     # Testing
-    "pytest>=6.0.0",
-    "pytest-cov>=2.10.0",
-    "pytest-html>=3.0.0",
-    "coverage>=5.0.0",
+    "pytest>=6.0.0,<9.0.0",
+    "pytest-cov>=2.10.0,<7.0.0",
+    "pytest-html>=3.0.0,<5.0.0",
+    "coverage>=5.0.0,<8.0.0",
     # Code quality
-    "flake8>=3.8.0",
-    "black>=21.0.0",
-    "isort>=5.0.0",
+    "flake8>=3.8.0,<8.0.0",
+    "black>=21.0.0,<26.0.0",
+    "isort>=5.0.0,<6.0.0",
     # Build tools
-    "build>=0.7.0",
-    "twine>=3.0.0",
+    "build>=0.7.0,<2.0.0",
+    "twine>=3.0.0,<7.0.0",
     # Development utilities
-    "pre-commit>=2.15.0",
-    "tox>=3.20.0",
+    "pre-commit>=2.15.0,<5.0.0",
+    "tox>=3.20.0,<5.0.0",
+    # CHANGELOG validation
+    "keepachangelog>=2.0.0,<3.0.0",
 ]
 docs = [
-    "sphinx>=4.0.0",
-    "sphinx-rtd-theme>=1.0.0",
+    "sphinx>=4.0.0,<9.0.0",
+    "sphinx-rtd-theme>=1.0.0,<4.0.0",
 ]
 all = [
-    # Include all optional dependencies
-    "pytest>=6.0.0",
-    "pytest-cov>=2.10.0",
-    "pytest-html>=3.0.0",
-    "coverage>=5.0.0",
-    "flake8>=3.8.0",
-    "black>=21.0.0",
-    "isort>=5.0.0",
-    "build>=0.7.0",
-    "twine>=3.0.0",
-    "pre-commit>=2.15.0",
-    "tox>=3.20.0",
-    "sphinx>=4.0.0",
-    "sphinx-rtd-theme>=1.0.0",
+    # Include all optional dependencies (with version upper bounds)
+    "pytest>=6.0.0,<9.0.0",
+    "pytest-cov>=2.10.0,<7.0.0",
+    "pytest-html>=3.0.0,<5.0.0",
+    "coverage>=5.0.0,<8.0.0",
+    "flake8>=3.8.0,<8.0.0",
+    "black>=21.0.0,<26.0.0",
+    "isort>=5.0.0,<6.0.0",
+    "build>=0.7.0,<2.0.0",
+    "twine>=3.0.0,<7.0.0",
+    "pre-commit>=2.15.0,<5.0.0",
+    "tox>=3.20.0,<5.0.0",
+    "sphinx>=4.0.0,<9.0.0",
+    "sphinx-rtd-theme>=1.0.0,<4.0.0",
+    "keepachangelog>=2.0.0,<3.0.0",
 ]
 
 [project.urls]
