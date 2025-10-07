@@ -630,6 +630,74 @@ Config: `.github/dependabot.yml`
 - **publish-to-testpypi.yml**: Dev branch publishing (9 combinations)
 - **publish-to-pypi.yml**: Production releases (intelligent test reuse)
 
+## Troubleshooting
+
+### Trusted Publishing Issues
+
+If you encounter "Trusted publishing exchange failure" errors:
+
+1. **Quick Diagnostic**:
+   ```bash
+   bash scripts/diagnose_trusted_publishing.sh
+   ```
+
+2. **Common Causes**:
+   - PyPI Trusted Publisher not configured
+   - Configuration mismatch (Owner/Repository/Workflow/Environment)
+   - GitHub Environment not created
+   - Missing `id-token: write` permission
+
+3. **Detailed Guides**:
+   - [Trusted Publishing Setup](docs/TRUSTED_PUBLISHING_SETUP.md)
+   - [Troubleshooting Guide](docs/TROUBLESHOOTING_TRUSTED_PUBLISHING.md)
+   - [API Token Fallback](docs/FALLBACK_API_TOKEN_SETUP.md)
+
+4. **Debug Workflow**:
+   ```bash
+   gh workflow run debug-trusted-publishing.yml
+   gh run watch
+   ```
+
+### Release Script Issues
+
+If `release.sh` fails:
+
+1. **Check prerequisites**:
+   ```bash
+   python3 --version  # Python 3 required
+   git status         # Clean working directory
+   git branch         # On dev branch
+   ```
+
+2. **Validation failures**:
+   ```bash
+   # Run validation manually
+   python3 scripts/validate_release.py --new-version 1.2.4 --version-type patch
+   ```
+
+3. **Rollback if needed**:
+   ```bash
+   bash scripts/release.sh --rollback
+   ```
+
+### Workflow Failures
+
+If GitHub Actions workflows fail:
+
+1. **Check recent runs**:
+   ```bash
+   gh run list --workflow=publish-to-pypi.yml --limit=5
+   gh run view --log-failed
+   ```
+
+2. **Tag verification failed**:
+   - Ensure tag is on `main` branch
+   - Delete and recreate tag on correct branch
+
+3. **Test reuse issues**:
+   - TestPyPI tests expire after 7 days
+   - Force new tests by pushing to dev branch first
+
 ## References
 
 - [setuptools_scm documentation](https://setuptools-scm.readthedocs.io/)
@@ -638,3 +706,4 @@ Config: `.github/dependabot.yml`
 - [Git Tagging Documentation](https://git-scm.com/book/en/v2/Git-Basics-Tagging)
 - [Conventional Commits](https://www.conventionalcommits.org/)
 - [Keep a Changelog](https://keepachangelog.com/)
+- [Trusted Publishing Documentation](https://docs.pypi.org/trusted-publishers/)

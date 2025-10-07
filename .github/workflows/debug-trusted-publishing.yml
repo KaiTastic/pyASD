@@ -1,0 +1,176 @@
+# Diagnostic Workflow for Trusted Publishing
+#
+# Purpose: Debug and verify OIDC token claims for Trusted Publishing
+# Usage: Manually trigger this workflow to diagnose configuration issues
+#
+# Run with: gh workflow run debug-trusted-publishing.yml
+
+name: Debug Trusted Publishing
+
+on:
+  workflow_dispatch:  # Manual trigger only
+    inputs:
+      environment:
+        description: 'Environment to test (leave empty for no environment)'
+        required: false
+        default: 'pypi-production'
+        type: string
+
+jobs:
+  debug-oidc-claims:
+    name: Print OIDC Token Claims
+    runs-on: ubuntu-latest
+
+    # Use the same environment as production workflow
+    environment: ${{ inputs.environment || 'pypi-production' }}
+
+    permissions:
+      id-token: write  # Required for OIDC token
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Print workflow context
+        run: |
+          echo "=== Workflow Context ==="
+          echo "Repository: ${{ github.repository }}"
+          echo "Repository Owner: ${{ github.repository_owner }}"
+          echo "Workflow: ${{ github.workflow }}"
+          echo "Workflow File: ${{ github.workflow_ref }}"
+          echo "Environment: ${{ inputs.environment || 'pypi-production' }}"
+          echo "Ref: ${{ github.ref }}"
+          echo "SHA: ${{ github.sha }}"
+          echo ""
+
+      - name: Get OIDC Token Claims
+        id: oidc
+        run: |
+          echo "=== OIDC Token Claims ==="
+          echo "Requesting OIDC token from GitHub..."
+
+          # Request OIDC token with PyPI audience
+          TOKEN=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=pypi" | jq -r '.value')
+
+          if [ "$TOKEN" = "null" ] || [ -z "$TOKEN" ]; then
+            echo "❌ Failed to get OIDC token"
+            echo "This usually means:"
+            echo "  1. id-token: write permission is missing"
+            echo "  2. Repository is a fork (OIDC not supported)"
+            echo "  3. GitHub OIDC service is unavailable"
+            exit 1
+          fi
+
+          echo "✅ OIDC token obtained successfully"
+          echo ""
+
+          # Decode and print token claims
+          echo "Token Claims (decoded):"
+          echo "$TOKEN" | cut -d'.' -f2 | base64 -d 2>/dev/null | jq '.' || \
+          echo "$TOKEN" | cut -d'.' -f2 | python3 -c "import sys, json, base64; print(json.dumps(json.loads(base64.urlsafe_b64decode(sys.stdin.read() + '==' )), indent=2))"
+
+      - name: Verify PyPI Configuration Requirements
+        run: |
+          echo ""
+          echo "=== PyPI Configuration Requirements ==="
+          echo "Your PyPI Trusted Publisher should be configured with:"
+          echo ""
+          echo "  Owner: ${{ github.repository_owner }}"
+          echo "  Repository name: $(echo '${{ github.repository }}' | cut -d'/' -f2)"
+          echo "  Workflow name: debug-trusted-publishing.yml"
+          echo "  Environment name: ${{ inputs.environment || 'pypi-production' }}"
+          echo ""
+          echo "⚠️  Note: For production, use workflow name: publish-to-pypi.yml"
+          echo ""
+
+      - name: Test PyPI API Reachability
+        run: |
+          echo "=== Testing PyPI API Reachability ==="
+          echo "Checking if PyPI is accessible..."
+
+          # Test PyPI API
+          if curl -sSf https://pypi.org/pypi/pyASDReader/json > /dev/null 2>&1; then
+            echo "✅ PyPI API is accessible"
+            echo "   Project: https://pypi.org/project/pyASDReader/"
+          else
+            echo "⚠️  Could not reach PyPI API"
+            echo "   This might be a temporary network issue"
+          fi
+
+          echo ""
+
+          # Test TestPyPI API
+          if curl -sSf https://test.pypi.org/pypi/pyASDReader/json > /dev/null 2>&1; then
+            echo "✅ TestPyPI API is accessible"
+            echo "   Project: https://test.pypi.org/project/pyASDReader/"
+          else
+            echo "⚠️  Could not reach TestPyPI API"
+          fi
+
+      - name: Check GitHub Environment Configuration
+        run: |
+          echo ""
+          echo "=== GitHub Environment Check ==="
+          echo "Environment: ${{ inputs.environment || 'pypi-production' }}"
+
+          if [ -n "${{ inputs.environment }}" ]; then
+            echo "✅ Environment is set"
+            echo ""
+            echo "Verify environment configuration at:"
+            echo "https://github.com/${{ github.repository }}/settings/environments"
+            echo ""
+            echo "Expected settings:"
+            echo "  - Name: ${{ inputs.environment }}"
+            echo "  - Deployment branches: main (or appropriate branch)"
+            echo "  - Required reviewers: At least 1 (recommended)"
+          else
+            echo "ℹ️  No environment specified (workflow running without environment protection)"
+          fi
+
+      - name: Generate Diagnostic Report
+        if: always()
+        run: |
+          echo ""
+          echo "============================================"
+          echo "  Diagnostic Report Summary"
+          echo "============================================"
+          echo ""
+          echo "Repository Information:"
+          echo "  - Full name: ${{ github.repository }}"
+          echo "  - Owner: ${{ github.repository_owner }}"
+          echo "  - Default branch: ${{ github.event.repository.default_branch }}"
+          echo ""
+          echo "Workflow Information:"
+          echo "  - Workflow: ${{ github.workflow }}"
+          echo "  - File: ${{ github.workflow_ref }}"
+          echo "  - Run ID: ${{ github.run_id }}"
+          echo "  - Run URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo ""
+          echo "Environment:"
+          echo "  - Name: ${{ inputs.environment || '(none)' }}"
+          echo "  - Settings URL: https://github.com/${{ github.repository }}/settings/environments"
+          echo ""
+          echo "PyPI Configuration URLs:"
+          echo "  - PyPI: https://pypi.org/manage/project/pyASDReader/settings/publishing/"
+          echo "  - TestPyPI: https://test.pypi.org/manage/project/pyASDReader/settings/publishing/"
+          echo ""
+          echo "============================================"
+          echo ""
+          echo "Next Steps:"
+          echo "  1. Compare OIDC token claims above with PyPI configuration"
+          echo "  2. Verify all values match exactly (case-sensitive)"
+          echo "  3. For production, use workflow: publish-to-pypi.yml"
+          echo "  4. See docs/TRUSTED_PUBLISHING_SETUP.md for detailed setup"
+          echo "  5. See docs/TROUBLESHOOTING_TRUSTED_PUBLISHING.md for common issues"
+          echo ""
+
+      - name: Upload diagnostic report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trusted-publishing-diagnostic-report
+          path: |
+            ${{ github.workspace }}/.github/workflows/debug-trusted-publishing.yml
+          retention-days: 7
