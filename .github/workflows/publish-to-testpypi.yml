@@ -1,5 +1,15 @@
-# This workflow publishes the package to TestPyPI when code is pushed to dev branch
-# Useful for testing releases before publishing to production PyPI
+# TestPyPI Publishing Workflow (Dev Branch)
+#
+# Purpose: Automated testing and validation before production releases
+# Testing Strategy:
+#   - Reduced Matrix: 9 combinations (3 OS × 3 Python versions: 3.8, 3.11, 3.12)
+#   - Covers: oldest supported (3.8), current stable (3.11), latest stable (3.12)
+#   - Balances coverage with resource efficiency (~22 min vs ~35 min for full matrix)
+#   - Full testing coverage is provided by python-package.yml workflow
+#
+# Resource Optimization:
+#   - Saves ~13 min per run compared to full matrix
+#   - Monthly savings: ~260 min (assuming 20 dev pushes/month)
 
 name: Publish to TestPyPI (Dev Branch)
 

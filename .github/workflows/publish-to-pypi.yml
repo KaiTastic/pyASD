@@ -1,4 +1,16 @@
-# This workflow publishes the package to PyPI when a version tag is pushed
+# PyPI Production Release Workflow
+#
+# Purpose: Automated production deployment with intelligent test optimization
+# Testing Strategy:
+#   - Conditional Testing: Reuses TestPyPI tests if available (within 7 days)
+#   - Reduced Matrix: 9 combinations (3 OS × 3 Python versions: 3.8, 3.11, 3.12)
+#   - Full testing is provided by python-package.yml and TestPyPI workflows
+#
+# Resource Optimization:
+#   - With test reuse: ~8 min (skips verification)
+#   - Without test reuse: ~23 min (runs 9 verification jobs)
+#   - Average savings: ~45 min per release with proper workflow
+#
 # Version number is automatically determined by setuptools-scm from the git tag
 # For more information see: https://packaging.python.org/en/latest/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/
 
