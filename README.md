@@ -1,4 +1,4 @@
-### pyASDReader - Python ASD Spectral File Reader
+### pyASDReader - A Python Library for ASD Spectral File Reading
 
 [![PyPI version](https://img.shields.io/pypi/v/pyASDReader?style=flat-square)](https://pypi.org/project/pyASDReader/)
 [![Python versions](https://img.shields.io/pypi/pyversions/pyASDReader?style=flat-square)](https://pypi.org/project/pyASDReader/)
@@ -311,6 +311,56 @@ Comprehensive export capabilities beyond the standard ASCII format:
 - Batch processing with parallel execution
 - Integration with popular spectral analysis libraries
 
+#### Resampling
+
+Advanced spectral resampling capabilities for data standardization and cross-instrument comparison:
+
+**Key Features:**
+- **Multi-method interpolation**: Linear, cubic spline, and higher-order interpolation
+- **Instrument-aware resampling**: Optional consideration of Spectral Response Functions (SRF)
+- **Flexible wavelength grids**: Custom intervals (e.g., 1 nm, 5 nm, 10 nm) or target wavelength arrays
+- **Physical accuracy**: SRF convolution for accurate cross-instrument data alignment
+
+**Use Cases:**
+- Standardize spectral resolution across multiple measurements
+- Align ASD data with satellite sensor bands (e.g., Sentinel-2, Landsat, EnMap, GF-5)
+- Match reference spectral libraries with different sampling intervals
+- Prepare datasets for machine learning models requiring uniform wavelength grids
+
+#### Graphic User Interface
+
+User-friendly desktop application for interactive ASD file analysis and visualization:
+
+**Key Features:**
+- **Intuitive File Management**:
+  - Drag-and-drop file loading
+  - Batch processing of multiple ASD files
+  - Directory browser with file preview
+  - Recent file history
+
+- **Interactive Visualization**:
+  - Real-time spectral plotting with zoom/pan controls
+  - Multiple spectra overlay and comparison
+  - Customizable plot styles (line color, width, markers)
+  - Export plots to high-resolution images (PNG, SVG, PDF)
+
+- **Data Processing Tools**:
+  - One-click derivative calculations (1st, 2nd order)
+  - Log(1/R) transformations
+  - Spectral resampling with visual preview
+  - Jump correction at detector boundaries
+
+- **Metadata Viewer**:
+  - Comprehensive instrument information display
+  - Acquisition parameters and settings
+  - Calibration status and timestamps
+  - GPS coordinates and measurement notes
+
+- **Export Options**:
+  - Multiple format support (CSV, Excel, JSON, HDF5)
+  - Customizable column selection
+  - Batch export with naming templates
+  - Direct integration with spectral analysis software
 
 ## Citation
 
@@ -318,7 +368,7 @@ If you use pyASDReader in your research, please cite it using the following info
 
 **BibTeX format**:
 ```bibtex
-@software{cao2025pyasdreader,
+@software{pyASDReader,
   author = {Cao, Kai},
   title = {pyASDReader: A Python Library for ASD Spectral File Reading},
   year = {2025},
