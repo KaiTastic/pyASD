@@ -30,6 +30,13 @@ pyASDReader is a robust Python library designed to read and parse all versions (
   - Type-safe enum constants for file attributes
   - Robust error handling and validation
 
+- **Graphical User Interface**: PyQt6-based GUI application
+  - Interactive spectral data visualization
+  - File browsing and recent files management
+  - Comprehensive metadata display
+  - Export data to CSV and plots to PNG/SVG/PDF
+  - See [GUI README](gui/README.md) for details
+
 ## Requirements
 
 - Python >=3.8
@@ -55,9 +62,29 @@ cd pyASDReader
 # Install in editable mode with development dependencies
 pip install -e ".[dev]"
 
-# Install with all dependencies (dev + docs + testing)
+# Install with GUI support (adds PyQt6 and matplotlib)
+pip install -e ".[gui]"
+
+# Install with all dependencies (dev + docs + gui + testing)
 pip install -e ".[all]"
 ```
+
+### GUI Application
+
+To use the graphical interface:
+
+```bash
+# Install with GUI dependencies
+pip install pyASDReader[gui]  # or pip install -e ".[gui]"
+
+# Launch the GUI
+python main.py
+
+# Or open a specific file
+python main.py path/to/spectrum.asd
+```
+
+See the [GUI documentation](gui/README.md) for more details.
 
 ## Documentation
 
