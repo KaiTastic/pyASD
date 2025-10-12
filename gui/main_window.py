@@ -4,6 +4,7 @@ Main window for pyASDReader GUI application
 
 import sys
 import os
+from typing import List
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                               QSplitter, QMenuBar, QMenu, QFileDialog,
                               QMessageBox, QStatusBar, QDialog, QDialogButtonBox,
@@ -17,6 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from pyASDReader import ASDFile
 from gui.widgets import PlotWidget, MetadataWidget, FilePanel
 from gui.widgets.properties_panel import PropertiesPanel
+from gui.widgets.multi_plot_canvas import MultiPlotCanvas, LayoutMode
 from gui.utils import ExportManager
 
 
@@ -90,11 +92,16 @@ class MainWindow(QMainWindow):
         # Left panel: File browser
         self.file_panel = FilePanel()
         self.file_panel.file_selected.connect(self.load_asd_file)
+        self.file_panel.files_checked.connect(self._on_files_checked)
         main_splitter.addWidget(self.file_panel)
 
-        # Center panel: Plot widget (main work area)
-        self.plot_widget = PlotWidget()
-        main_splitter.addWidget(self.plot_widget)
+        # Center panel: Multi-plot canvas (main work area)
+        self.multi_plot_canvas = MultiPlotCanvas()
+        main_splitter.addWidget(self.multi_plot_canvas)
+
+        # Keep reference to plot_widget for compatibility
+        # Single plot mode uses first subplot
+        self.plot_widget = None
 
         # Right panel: Properties panel
         self.properties_panel = PropertiesPanel()
@@ -178,13 +185,13 @@ class MainWindow(QMainWindow):
         # View menu
         view_menu = menubar.addMenu("&View")
 
-        refresh_action = QAction("&Refresh Plot", self)
+        refresh_action = QAction("&Refresh Plots", self)
         refresh_action.setShortcut("F5")
-        refresh_action.triggered.connect(self.plot_widget.update_plot)
+        refresh_action.triggered.connect(self._refresh_all_plots)
         view_menu.addAction(refresh_action)
 
-        clear_plot_action = QAction("&Clear Plot", self)
-        clear_plot_action.triggered.connect(self.plot_widget.clear_plot)
+        clear_plot_action = QAction("&Clear All Plots", self)
+        clear_plot_action.triggered.connect(self._clear_all_plots)
         view_menu.addAction(clear_plot_action)
 
         # Help menu
@@ -196,7 +203,7 @@ class MainWindow(QMainWindow):
 
     def load_asd_file(self, filepath):
         """
-        Load an ASD file
+        Load an ASD file (single file mode)
 
         Args:
             filepath: Path to the ASD file
@@ -210,8 +217,11 @@ class MainWindow(QMainWindow):
             # Update current file
             self.current_asd_file = asd_file
 
-            # Update widgets
-            self.plot_widget.set_asd_file(asd_file)
+            # Load to first subplot
+            if self.multi_plot_canvas.subplots:
+                self.multi_plot_canvas.subplots[0].load_data(asd_file, 'reflectance')
+
+            # Update properties panel
             self.properties_panel.set_asd_file(asd_file)
 
             self.status_bar.showMessage(f"Loaded: {os.path.basename(filepath)}", 5000)
@@ -224,12 +234,62 @@ class MainWindow(QMainWindow):
             )
             self.status_bar.showMessage("Error loading file", 5000)
 
+    def _on_files_checked(self, files: List[str]):
+        """
+        Handle multiple files checked in file browser
+
+        Automatically switch to appropriate layout based on file count
+        """
+        if not files:
+            return
+
+        num_files = len(files)
+
+        # Select appropriate layout
+        if num_files == 1:
+            layout_mode = LayoutMode.SINGLE
+        elif num_files == 2:
+            layout_mode = LayoutMode.HORIZONTAL_2
+        elif num_files == 3:
+            layout_mode = LayoutMode.HORIZONTAL_3
+        elif num_files == 4:
+            layout_mode = LayoutMode.GRID_2x2
+        elif num_files <= 6:
+            layout_mode = LayoutMode.GRID_2x3
+        else:
+            # Too many files, only load first 6
+            files = files[:6]
+            layout_mode = LayoutMode.GRID_2x3
+            QMessageBox.information(
+                self,
+                "Too Many Files",
+                f"Only first 6 files will be displayed.\nTotal selected: {num_files}"
+            )
+
+        # Switch layout and load files
+        self.multi_plot_canvas.set_layout_mode(layout_mode)
+        self.multi_plot_canvas.load_files_to_subplots(files, 'reflectance')
+
+        self.status_bar.showMessage(f"Loaded {len(files)} files in {layout_mode.value} layout", 5000)
+
     def close_current_file(self):
         """Close the currently loaded file"""
         self.current_asd_file = None
-        self.plot_widget.clear_plot()
+        self.multi_plot_canvas.clear_all()
         self.properties_panel.clear()
         self.status_bar.showMessage("File closed", 3000)
+
+    def _refresh_all_plots(self):
+        """Refresh all plots"""
+        for subplot in self.multi_plot_canvas.subplots:
+            if subplot.ax:
+                subplot.canvas.draw()
+        self.status_bar.showMessage("Plots refreshed", 2000)
+
+    def _clear_all_plots(self):
+        """Clear all plots"""
+        self.multi_plot_canvas.clear_all()
+        self.status_bar.showMessage("All plots cleared", 2000)
 
     def export_to_csv(self):
         """Export current data to CSV"""
@@ -308,23 +368,25 @@ class MainWindow(QMainWindow):
 
     def export_plot(self, format_type):
         """
-        Export current plot
+        Export current plots
 
         Args:
             format_type: File format ('png', 'svg', 'pdf')
         """
-        if self.current_asd_file is None:
-            QMessageBox.warning(self, "No File Loaded",
-                              "Please load an ASD file first.")
+        if not self.multi_plot_canvas.subplots:
+            QMessageBox.warning(self, "No Plot",
+                              "No plots to export.")
             return
 
         format_upper = format_type.upper()
         filter_str = f"{format_upper} Files (*.{format_type});;All Files (*.*)"
 
+        default_name = "multiplot" if len(self.multi_plot_canvas.subplots) > 1 else "plot"
+
         filepath, _ = QFileDialog.getSaveFileName(
             self,
-            f"Export Plot as {format_upper}",
-            f"{os.path.splitext(self.current_asd_file.filename)[0]}_plot.{format_type}",
+            f"Export Plots as {format_upper}",
+            f"{default_name}.{format_type}",
             filter_str
         )
 
@@ -332,7 +394,12 @@ class MainWindow(QMainWindow):
             return
 
         try:
-            self.plot_widget.export_figure(filepath)
+            # Export first subplot's figure (for now)
+            # TODO: Export combined figure for multiple subplots
+            if self.multi_plot_canvas.subplots:
+                first_subplot = self.multi_plot_canvas.subplots[0]
+                first_subplot.figure.savefig(filepath, dpi=300, bbox_inches='tight')
+
             QMessageBox.information(self, "Export Successful",
                                   f"Plot exported successfully to:\n{filepath}")
             self.status_bar.showMessage(f"Exported plot to {os.path.basename(filepath)}", 5000)

@@ -279,14 +279,296 @@ class DataTypeItemWidget(QWidget):
             self.load_btn.setEnabled(False)
 
 
+class CalibrationTab(QScrollArea):
+    """
+    Calibration information tab (Phase 3)
+
+    Displays calibration data from ASD file (v7+):
+    - Calibration header information
+    - Calibration series data (ABS, BSE, LMP, FO)
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.setWidgetResizable(True)
+
+        content = QWidget()
+        layout = QVBoxLayout(content)
+
+        # Header group
+        header_group = QGroupBox("Calibration Header")
+        header_layout = QFormLayout()
+
+        self.calib_count_label = QLabel("--")
+        header_layout.addRow("Calibration Count:", self.calib_count_label)
+
+        header_group.setLayout(header_layout)
+        layout.addWidget(header_group)
+
+        # Calibration series details
+        self.series_group = QGroupBox("Calibration Series")
+        self.series_layout = QVBoxLayout()
+        self.series_group.setLayout(self.series_layout)
+        layout.addWidget(self.series_group)
+
+        # Data availability
+        data_group = QGroupBox("Calibration Data Availability")
+        data_layout = QFormLayout()
+
+        self.abs_label = QLabel("--")
+        data_layout.addRow("Absolute (ABS):", self.abs_label)
+
+        self.bse_label = QLabel("--")
+        data_layout.addRow("Base (BSE):", self.bse_label)
+
+        self.lmp_label = QLabel("--")
+        data_layout.addRow("Lamp (LMP):", self.lmp_label)
+
+        self.fo_label = QLabel("--")
+        data_layout.addRow("Fiber Optic (FO):", self.fo_label)
+
+        data_group.setLayout(data_layout)
+        layout.addWidget(data_group)
+
+        layout.addStretch()
+        self.setWidget(content)
+
+    def display(self, asd_file: ASDFile):
+        """Display calibration information"""
+        # Clear previous series info
+        while self.series_layout.count():
+            child = self.series_layout.takeAt(0)
+            if child.widget():
+                child.widget().deleteLater()
+
+        if asd_file.calibrationHeader is None:
+            self.calib_count_label.setText("Not available (file version < 7)")
+            self.abs_label.setText("--")
+            self.bse_label.setText("--")
+            self.lmp_label.setText("--")
+            self.fo_label.setText("--")
+            return
+
+        # Header info
+        self.calib_count_label.setText(str(asd_file.calibrationHeader.calibrationNum))
+
+        # Series details
+        if asd_file.calibrationHeader.calibrationSeries:
+            for i, series in enumerate(asd_file.calibrationHeader.calibrationSeries):
+                cb_type, cb_name, cb_it, cb_s1gain, cb_s2gain = series
+
+                series_widget = QGroupBox(f"Series {i+1}: {cb_type.name}")
+                series_layout = QFormLayout()
+                series_layout.addRow("Type:", QLabel(cb_type.name))
+                series_layout.addRow("Name:", QLabel(cb_name))
+                series_layout.addRow("Integration Time:", QLabel(f"{cb_it} ms"))
+                series_layout.addRow("SWIR1 Gain:", QLabel(str(cb_s1gain)))
+                series_layout.addRow("SWIR2 Gain:", QLabel(str(cb_s2gain)))
+                series_widget.setLayout(series_layout)
+
+                self.series_layout.addWidget(series_widget)
+
+        # Data availability
+        self.abs_label.setText("✅ Available" if asd_file.calibrationSeriesABS is not None else "❌ Not available")
+        self.bse_label.setText("✅ Available" if asd_file.calibrationSeriesBSE is not None else "❌ Not available")
+        self.lmp_label.setText("✅ Available" if asd_file.calibrationSeriesLMP is not None else "❌ Not available")
+        self.fo_label.setText("✅ Available" if asd_file.calibrationSeriesFO is not None else "❌ Not available")
+
+    def clear(self):
+        """Clear all labels"""
+        self.calib_count_label.setText("--")
+        self.abs_label.setText("--")
+        self.bse_label.setText("--")
+        self.lmp_label.setText("--")
+        self.fo_label.setText("--")
+
+        # Clear series widgets
+        while self.series_layout.count():
+            child = self.series_layout.takeAt(0)
+            if child.widget():
+                child.widget().deleteLater()
+
+
+class HistoryTab(QScrollArea):
+    """
+    Processing history tab (Phase 3)
+
+    Displays audit log from ASD file (v8+)
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.setWidgetResizable(True)
+
+        content = QWidget()
+        layout = QVBoxLayout(content)
+
+        # Header
+        header_label = QLabel("<b>Audit Log</b>")
+        layout.addWidget(header_label)
+
+        # Event count
+        self.count_label = QLabel("Events: --")
+        layout.addWidget(self.count_label)
+
+        # Event list
+        self.event_list = QLabel()
+        self.event_list.setWordWrap(True)
+        self.event_list.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        self.event_list.setStyleSheet("font-family: monospace; font-size: 9pt;")
+        layout.addWidget(self.event_list)
+
+        layout.addStretch()
+        self.setWidget(content)
+
+    def display(self, asd_file: ASDFile):
+        """Display audit log"""
+        if asd_file.auditLog is None:
+            self.count_label.setText("Audit log not available (file version < 8)")
+            self.event_list.setText("")
+            return
+
+        event_count = asd_file.auditLog.auditCount
+        self.count_label.setText(f"Events: {event_count}")
+
+        if event_count > 0 and asd_file.auditLog.auditEvents:
+            event_text = ""
+            for i, event in enumerate(asd_file.auditLog.auditEvents, 1):
+                event_text += f"{i}. {event}\n"
+            self.event_list.setText(event_text)
+        else:
+            self.event_list.setText("No audit events recorded")
+
+    def clear(self):
+        """Clear display"""
+        self.count_label.setText("Events: --")
+        self.event_list.setText("")
+
+
+class SystemTab(QScrollArea):
+    """
+    System information tab (Phase 3)
+
+    Displays system and instrument information
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.setWidgetResizable(True)
+
+        content = QWidget()
+        layout = QVBoxLayout(content)
+
+        # Instrument group
+        instrument_group = QGroupBox("Instrument Information")
+        instrument_layout = QFormLayout()
+
+        self.instrument_type_label = QLabel("--")
+        instrument_layout.addRow("Type:", self.instrument_type_label)
+
+        self.instrument_model_label = QLabel("--")
+        instrument_layout.addRow("Model:", self.instrument_model_label)
+
+        self.serial_label = QLabel("--")
+        instrument_layout.addRow("Serial Number:", self.serial_label)
+
+        instrument_group.setLayout(instrument_layout)
+        layout.addWidget(instrument_group)
+
+        # Spectra info group
+        spectra_group = QGroupBox("Spectral Configuration")
+        spectra_layout = QFormLayout()
+
+        self.spectra_type_label = QLabel("--")
+        spectra_layout.addRow("Spectrum Type:", self.spectra_type_label)
+
+        self.channels_label = QLabel("--")
+        spectra_layout.addRow("Number of Channels:", self.channels_label)
+
+        self.wavelength_range_label = QLabel("--")
+        spectra_layout.addRow("Wavelength Range:", self.wavelength_range_label)
+
+        self.splice1_label = QLabel("--")
+        spectra_layout.addRow("Splice Point 1:", self.splice1_label)
+
+        self.splice2_label = QLabel("--")
+        spectra_layout.addRow("Splice Point 2:", self.splice2_label)
+
+        spectra_group.setLayout(spectra_layout)
+        layout.addWidget(spectra_group)
+
+        # Acquisition settings group
+        acquisition_group = QGroupBox("Acquisition Settings")
+        acquisition_layout = QFormLayout()
+
+        self.integration_time_label = QLabel("--")
+        acquisition_layout.addRow("Integration Time:", self.integration_time_label)
+
+        self.fo_label = QLabel("--")
+        acquisition_layout.addRow("Foreoptic:", self.fo_label)
+
+        self.dark_current_label = QLabel("--")
+        acquisition_layout.addRow("Dark Current Correction:", self.dark_current_label)
+
+        acquisition_group.setLayout(acquisition_layout)
+        layout.addWidget(acquisition_group)
+
+        layout.addStretch()
+        self.setWidget(content)
+
+    def display(self, asd_file: ASDFile):
+        """Display system information"""
+        metadata = asd_file.metadata
+
+        # Instrument
+        self.instrument_type_label.setText(str(metadata.instrumentType.name))
+        self.instrument_model_label.setText(str(metadata.instrumentModel.name))
+        self.serial_label.setText(str(metadata.instrumentNum))
+
+        # Spectra config
+        self.spectra_type_label.setText(str(metadata.spectraType.name))
+        self.channels_label.setText(str(metadata.channels))
+
+        if asd_file.wavelengths is not None:
+            wl_range = f"{asd_file.wavelengths[0]:.1f} - {asd_file.wavelengths[-1]:.1f} nm"
+            self.wavelength_range_label.setText(wl_range)
+        else:
+            self.wavelength_range_label.setText("--")
+
+        self.splice1_label.setText(f"{metadata.splice1Wave} nm" if metadata.splice1Wave else "--")
+        self.splice2_label.setText(f"{metadata.splice2Wave} nm" if metadata.splice2Wave else "--")
+
+        # Acquisition
+        self.integration_time_label.setText(str(metadata.intergrationTime.name))
+        self.fo_label.setText(str(metadata.fo))
+        self.dark_current_label.setText("✅ Enabled" if metadata.darkCurrentCorrention else "❌ Disabled")
+
+    def clear(self):
+        """Clear all labels"""
+        self.instrument_type_label.setText("--")
+        self.instrument_model_label.setText("--")
+        self.serial_label.setText("--")
+        self.spectra_type_label.setText("--")
+        self.channels_label.setText("--")
+        self.wavelength_range_label.setText("--")
+        self.splice1_label.setText("--")
+        self.splice2_label.setText("--")
+        self.integration_time_label.setText("--")
+        self.fo_label.setText("--")
+        self.dark_current_label.setText("--")
+
+
 class PropertiesPanel(QWidget):
     """
-    Properties panel (Phase 1 - Simplified version)
+    Properties panel (Phase 3 - Complete version)
 
-    Contains 3 tabs:
+    Contains 6 tabs:
     - File Information
     - Metadata (reuses MetadataWidget)
     - Data Types
+    - Calibration (Phase 3 - NEW)
+    - History (Phase 3 - NEW)
+    - System (Phase 3 - NEW)
     """
 
     def __init__(self):
@@ -318,6 +600,18 @@ class PropertiesPanel(QWidget):
         self.data_types_tab = DataTypesTab()
         self.tabs.addTab(self.data_types_tab, "Data Types")
 
+        # Tab 4: Calibration (Phase 3 - NEW)
+        self.calibration_tab = CalibrationTab()
+        self.tabs.addTab(self.calibration_tab, "Calibration")
+
+        # Tab 5: History (Phase 3 - NEW)
+        self.history_tab = HistoryTab()
+        self.tabs.addTab(self.history_tab, "History")
+
+        # Tab 6: System (Phase 3 - NEW)
+        self.system_tab = SystemTab()
+        self.tabs.addTab(self.system_tab, "System")
+
         layout.addWidget(self.tabs)
 
     def set_asd_file(self, asd_file: ASDFile):
@@ -325,9 +619,15 @@ class PropertiesPanel(QWidget):
         self.file_info_tab.display(asd_file)
         self.metadata_tab.set_asd_file(asd_file)
         self.data_types_tab.display(asd_file)
+        self.calibration_tab.display(asd_file)
+        self.history_tab.display(asd_file)
+        self.system_tab.display(asd_file)
 
     def clear(self):
         """Clear all tabs"""
         self.file_info_tab.clear()
         self.metadata_tab.clear()
         self.data_types_tab.clear()
+        self.calibration_tab.clear()
+        self.history_tab.clear()
+        self.system_tab.clear()
