@@ -363,10 +363,10 @@ class MainWindow(QMainWindow):
 
     def load_settings(self):
         """Load application settings"""
-        # Restore recent files
-        recent_files = self.settings.value("recent_files", [])
-        if recent_files:
-            self.file_panel.set_recent_files(recent_files)
+        # Restore last opened directory
+        last_dir = self.settings.value("last_directory", "")
+        if last_dir and os.path.isdir(last_dir):
+            self.file_panel.load_directory(last_dir)
 
         # Restore window geometry
         geometry = self.settings.value("geometry")
@@ -375,8 +375,9 @@ class MainWindow(QMainWindow):
 
     def save_settings(self):
         """Save application settings"""
-        # Save recent files
-        self.settings.setValue("recent_files", self.file_panel.get_recent_files())
+        # Save last opened directory
+        if hasattr(self.file_panel.tree_widget, 'current_root') and self.file_panel.tree_widget.current_root:
+            self.settings.setValue("last_directory", self.file_panel.tree_widget.current_root)
 
         # Save window geometry
         self.settings.setValue("geometry", self.saveGeometry())
