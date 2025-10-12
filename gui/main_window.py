@@ -381,7 +381,9 @@ class MainWindow(QMainWindow):
         format_upper = format_type.upper()
         filter_str = f"{format_upper} Files (*.{format_type});;All Files (*.*)"
 
-        default_name = "multiplot" if len(self.multi_plot_canvas.subplots) > 1 else "plot"
+        # Determine if we have multiple subplots with data
+        active_subplots = [sp for sp in self.multi_plot_canvas.subplots if sp.current_file is not None]
+        default_name = "multiplot" if len(active_subplots) > 1 else "plot"
 
         filepath, _ = QFileDialog.getSaveFileName(
             self,
@@ -394,14 +396,19 @@ class MainWindow(QMainWindow):
             return
 
         try:
-            # Export first subplot's figure (for now)
-            # TODO: Export combined figure for multiple subplots
-            if self.multi_plot_canvas.subplots:
-                first_subplot = self.multi_plot_canvas.subplots[0]
-                first_subplot.figure.savefig(filepath, dpi=300, bbox_inches='tight')
+            # Export all subplots if more than one has data
+            if len(active_subplots) > 1:
+                self.multi_plot_canvas.export_all_subplots(filepath, dpi=300)
+            elif len(active_subplots) == 1:
+                # Export single subplot
+                active_subplots[0].figure.savefig(filepath, dpi=300, bbox_inches='tight')
+            else:
+                QMessageBox.warning(self, "No Data",
+                                  "No plot data to export.")
+                return
 
             QMessageBox.information(self, "Export Successful",
-                                  f"Plot exported successfully to:\n{filepath}")
+                                  f"Plot(s) exported successfully to:\n{filepath}")
             self.status_bar.showMessage(f"Exported plot to {os.path.basename(filepath)}", 5000)
 
         except Exception as e:

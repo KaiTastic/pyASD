@@ -562,13 +562,14 @@ class PropertiesPanel(QWidget):
     """
     Properties panel (Phase 3 - Complete version)
 
-    Contains 6 tabs:
+    Contains 7 tabs:
     - File Information
     - Metadata (reuses MetadataWidget)
     - Data Types
-    - Calibration (Phase 3 - NEW)
-    - History (Phase 3 - NEW)
-    - System (Phase 3 - NEW)
+    - Calibration (Phase 3)
+    - History (Phase 3)
+    - System (Phase 3)
+    - Statistics (Phase 4 - NEW)
     """
 
     def __init__(self):
@@ -612,6 +613,11 @@ class PropertiesPanel(QWidget):
         self.system_tab = SystemTab()
         self.tabs.addTab(self.system_tab, "System")
 
+        # Tab 7: Statistics (Phase 4 - NEW)
+        from gui.widgets.statistics_widget import StatisticsWidget
+        self.statistics_tab = StatisticsWidget()
+        self.tabs.addTab(self.statistics_tab, "Statistics")
+
         layout.addWidget(self.tabs)
 
     def set_asd_file(self, asd_file: ASDFile):
@@ -622,6 +628,7 @@ class PropertiesPanel(QWidget):
         self.calibration_tab.display(asd_file)
         self.history_tab.display(asd_file)
         self.system_tab.display(asd_file)
+        self.statistics_tab.update_statistics(asd_file, 'reflectance')
 
     def clear(self):
         """Clear all tabs"""
@@ -631,3 +638,4 @@ class PropertiesPanel(QWidget):
         self.calibration_tab.clear()
         self.history_tab.clear()
         self.system_tab.clear()
+        self.statistics_tab.clear()

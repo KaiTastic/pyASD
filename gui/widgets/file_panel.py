@@ -34,14 +34,14 @@ class FileTreeControlBar(QWidget):
         layout.setSpacing(5)
 
         # Select all button
-        self.select_all_btn = QPushButton("全选")
+        self.select_all_btn = QPushButton("All")
         self.select_all_btn.setMaximumWidth(50)
         self.select_all_btn.setToolTip("Select all files in tree")
         self.select_all_btn.clicked.connect(self.select_all_clicked)
         layout.addWidget(self.select_all_btn)
 
         # Clear all button
-        self.clear_all_btn = QPushButton("清空")
+        self.clear_all_btn = QPushButton("Clear")
         self.clear_all_btn.setMaximumWidth(50)
         self.clear_all_btn.setToolTip("Deselect all files")
         self.clear_all_btn.clicked.connect(self.clear_all_clicked)
@@ -55,14 +55,14 @@ class FileTreeControlBar(QWidget):
         layout.addWidget(self.refresh_btn)
 
         # Expand/collapse buttons
-        self.expand_btn = QPushButton("展开")
-        self.expand_btn.setMaximumWidth(50)
+        self.expand_btn = QPushButton("Expand")
+        self.expand_btn.setMaximumWidth(60)
         self.expand_btn.setToolTip("Expand all folders")
         self.expand_btn.clicked.connect(self.expand_all_clicked)
         layout.addWidget(self.expand_btn)
 
-        self.collapse_btn = QPushButton("折叠")
-        self.collapse_btn.setMaximumWidth(50)
+        self.collapse_btn = QPushButton("Collapse")
+        self.collapse_btn.setMaximumWidth(65)
         self.collapse_btn.setToolTip("Collapse all folders")
         self.collapse_btn.clicked.connect(self.collapse_all_clicked)
         layout.addWidget(self.collapse_btn)
@@ -661,31 +661,89 @@ class FilePanel(QWidget):
         self.file_selected.emit(filepath)
 
     def _on_compare_clicked(self):
-        """Compare button clicked"""
+        """
+        Compare button clicked
+
+        Loads checked files in side-by-side layout for comparison
+        """
         files = self.get_checked_files()
         if len(files) < 2:
             QMessageBox.warning(self, "Warning",
                               "Please select at least 2 files to compare")
             return
-        # TODO: Implement compare functionality
-        logger.info(f"Compare {len(files)} files")
+
+        # Emit signal to load files for comparison
+        # The main window will handle the actual comparison display
+        self.files_checked.emit(files)
+        logger.info(f"Compare {len(files)} files in side-by-side layout")
 
     def _on_overlay_clicked(self):
-        """Overlay button clicked"""
+        """
+        Overlay button clicked
+
+        Opens overlay plot dialog showing all checked files on one plot
+        """
         files = self.get_checked_files()
         if len(files) < 2:
             QMessageBox.warning(self, "Warning",
                               "Please select at least 2 files to overlay")
             return
-        # TODO: Implement overlay functionality
-        logger.info(f"Overlay {len(files)} files")
+
+        try:
+            # Load all ASD files
+            from pyASDReader import ASDFile
+            from gui.widgets.overlay_plot_widget import OverlayPlotDialog
+
+            asd_files = []
+            failed_files = []
+
+            for filepath in files:
+                try:
+                    asd_file = ASDFile(filepath)
+                    asd_files.append(asd_file)
+                except Exception as e:
+                    failed_files.append(os.path.basename(filepath))
+                    logger.error(f"Failed to load {filepath}: {e}")
+
+            if not asd_files:
+                QMessageBox.critical(self, "Error",
+                                   "Failed to load any of the selected files")
+                return
+
+            if failed_files:
+                QMessageBox.warning(self, "Partial Load",
+                                  f"Failed to load {len(failed_files)} file(s):\n" +
+                                  "\n".join(failed_files[:5]) +
+                                  ("\n..." if len(failed_files) > 5 else ""))
+
+            # Open overlay dialog
+            dialog = OverlayPlotDialog(asd_files, self)
+            dialog.exec()
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error",
+                               f"Failed to create overlay plot:\n{str(e)}")
+            logger.error(f"Overlay plot error: {e}")
 
     def _on_batch_export_clicked(self):
-        """Batch export button clicked"""
+        """
+        Batch export button clicked
+
+        Opens batch export dialog for exporting multiple files
+        """
         files = self.get_checked_files()
         if not files:
             QMessageBox.warning(self, "Warning",
                               "Please select files to export")
             return
-        # TODO: Open batch export dialog
-        logger.info(f"Batch export {len(files)} files")
+
+        try:
+            from gui.widgets.batch_export_dialog import BatchExportDialog
+
+            dialog = BatchExportDialog(files, self)
+            dialog.exec()
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error",
+                               f"Failed to open batch export dialog:\n{str(e)}")
+            logger.error(f"Batch export dialog error: {e}")

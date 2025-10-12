@@ -21,6 +21,7 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+import matplotlib.pyplot as plt
 
 logger = logging.getLogger(__name__)
 
@@ -664,6 +665,53 @@ class MultiPlotCanvas(QWidget):
         """Export all subplots"""
         # TODO: Implement export all functionality
         logger.info("Export all subplots")
+
+    def export_all_subplots(self, filepath: str, dpi: int = 300):
+        """
+        Export all subplots to a single file
+
+        Args:
+            filepath: Path to save the file
+            dpi: Resolution in dots per inch
+        """
+        if not self.subplots:
+            return
+
+        # Get grid size
+        rows, cols = self._get_grid_size(self.current_layout)
+
+        # Create a new figure with the same layout
+        fig = Figure(figsize=(cols * 6, rows * 4), dpi=100)
+
+        # Copy each subplot to the new figure
+        for idx, subplot in enumerate(self.subplots):
+            if subplot.current_file is None:
+                continue
+
+            # Calculate position in grid
+            row = idx // cols
+            col = idx % cols
+
+            # Create subplot in new figure
+            ax = fig.add_subplot(rows, cols, idx + 1)
+
+            # Get data from original subplot
+            wavelengths = subplot.current_file.wavelengths
+            data = getattr(subplot.current_file, subplot.current_data_type, None)
+
+            if data is not None and wavelengths is not None:
+                # Plot data
+                ax.plot(wavelengths, data, 'b-', linewidth=1.5)
+                ax.set_xlabel('Wavelength (nm)', fontsize=10)
+                ax.set_ylabel(subplot._get_ylabel(subplot.current_data_type), fontsize=10)
+                ax.set_title(f"{os.path.basename(subplot.current_file.filepath)}\n{subplot.current_data_type}",
+                           fontsize=10, fontweight='bold')
+                ax.grid(True, alpha=0.3, linestyle='--')
+
+        # Tight layout and save
+        fig.tight_layout()
+        fig.savefig(filepath, dpi=dpi, bbox_inches='tight')
+        plt.close(fig)
 
     def clear_all(self):
         """Clear all subplots"""
