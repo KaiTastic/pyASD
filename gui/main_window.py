@@ -16,6 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from pyASDReader import ASDFile
 from gui.widgets import PlotWidget, MetadataWidget, FilePanel
+from gui.widgets.properties_panel import PropertiesPanel
 from gui.utils import ExportManager
 
 
@@ -73,9 +74,9 @@ class MainWindow(QMainWindow):
         self.load_settings()
 
     def init_ui(self):
-        """Initialize the user interface"""
+        """Initialize the user interface - Three-column layout"""
         self.setWindowTitle("pyASDReader - ASD File Viewer")
-        self.setGeometry(100, 100, 1400, 800)
+        self.setGeometry(100, 100, 1600, 900)
 
         # Create central widget with splitter layout
         central_widget = QWidget()
@@ -83,32 +84,30 @@ class MainWindow(QMainWindow):
 
         main_layout = QHBoxLayout(central_widget)
 
-        # Create main splitter (horizontal)
+        # Create main splitter (horizontal) - Three columns
         main_splitter = QSplitter(Qt.Orientation.Horizontal)
 
-        # Left panel splitter (vertical) - File browser and metadata
-        left_splitter = QSplitter(Qt.Orientation.Vertical)
-
-        # File panel
+        # Left panel: File browser
         self.file_panel = FilePanel()
         self.file_panel.file_selected.connect(self.load_asd_file)
-        left_splitter.addWidget(self.file_panel)
+        main_splitter.addWidget(self.file_panel)
 
-        # Metadata widget
-        self.metadata_widget = MetadataWidget()
-        left_splitter.addWidget(self.metadata_widget)
-
-        # Set initial sizes for left splitter
-        left_splitter.setSizes([300, 500])
-
-        main_splitter.addWidget(left_splitter)
-
-        # Plot widget (right side)
+        # Center panel: Plot widget (main work area)
         self.plot_widget = PlotWidget()
         main_splitter.addWidget(self.plot_widget)
 
-        # Set initial sizes for main splitter
-        main_splitter.setSizes([400, 1000])
+        # Right panel: Properties panel
+        self.properties_panel = PropertiesPanel()
+        main_splitter.addWidget(self.properties_panel)
+
+        # Set initial sizes for three columns
+        # Left: 280px, Center: 800px (flexible), Right: 320px
+        main_splitter.setSizes([280, 800, 320])
+
+        # Allow left and right panels to collapse
+        main_splitter.setCollapsible(0, True)  # Left panel can collapse
+        main_splitter.setCollapsible(1, False)  # Center panel cannot collapse
+        main_splitter.setCollapsible(2, True)  # Right panel can collapse
 
         main_layout.addWidget(main_splitter)
 
@@ -213,7 +212,7 @@ class MainWindow(QMainWindow):
 
             # Update widgets
             self.plot_widget.set_asd_file(asd_file)
-            self.metadata_widget.set_asd_file(asd_file)
+            self.properties_panel.set_asd_file(asd_file)
 
             self.status_bar.showMessage(f"Loaded: {os.path.basename(filepath)}", 5000)
 
@@ -229,7 +228,7 @@ class MainWindow(QMainWindow):
         """Close the currently loaded file"""
         self.current_asd_file = None
         self.plot_widget.clear_plot()
-        self.metadata_widget.clear()
+        self.properties_panel.clear()
         self.status_bar.showMessage("File closed", 3000)
 
     def export_to_csv(self):
