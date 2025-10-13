@@ -37,7 +37,7 @@ dependencies = [
 dev = [
     # Testing
     "pytest>=6.0.0,<9.0.0",
-    "pytest-cov>=2.10.0,<7.0.0",
+    "pytest-cov>=2.10.0,<8.0.0",
     "pytest-html>=3.0.0,<5.0.0",
     "coverage>=5.0.0,<8.0.0",
     # Code quality
@@ -64,7 +64,7 @@ gui = [
 all = [
     # Include all optional dependencies (with version upper bounds)
     "pytest>=6.0.0,<9.0.0",
-    "pytest-cov>=2.10.0,<7.0.0",
+    "pytest-cov>=2.10.0,<8.0.0",
     "pytest-html>=3.0.0,<5.0.0",
     "coverage>=5.0.0,<8.0.0",
     "flake8>=3.8.0,<8.0.0",
