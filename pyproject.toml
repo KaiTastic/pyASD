@@ -57,6 +57,10 @@ docs = [
     "sphinx>=4.0.0,<9.0.0",
     "sphinx-rtd-theme>=1.0.0,<4.0.0",
 ]
+gui = [
+    "PyQt6>=6.4.0,<7.0.0",
+    "matplotlib>=3.5.0,<4.0.0",
+]
 all = [
     # Include all optional dependencies (with version upper bounds)
     "pytest>=6.0.0,<9.0.0",
@@ -73,6 +77,8 @@ all = [
     "sphinx>=4.0.0,<9.0.0",
     "sphinx-rtd-theme>=1.0.0,<4.0.0",
     "keepachangelog>=2.0.0,<3.0.0",
+    "PyQt6>=6.4.0,<7.0.0",
+    "matplotlib>=3.5.0,<4.0.0",
 ]
 
 [project.urls]
