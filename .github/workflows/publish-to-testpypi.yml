@@ -45,7 +45,7 @@ jobs:
 
     steps:
     - name: Checkout code with full history
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         fetch-depth: 0  # Full history needed for setuptools-scm
 
