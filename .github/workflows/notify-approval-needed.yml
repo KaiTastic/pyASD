@@ -29,7 +29,7 @@ jobs:
     # Option 1: Slack Notification (Recommended)
     - name: Send Slack notification
       if: false  # Enable by changing to: if: true
-      uses: slackapi/slack-github-action@v1
+      uses: slackapi/slack-github-action@v2
       with:
         webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
         payload: |
